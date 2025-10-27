@@ -1,6 +1,12 @@
 """
-4 Parameter Chaotic Attractors
-Visualize specific attractor parameters
+4 Parameter Chaotic Attractor Visualizer
+
+This program generates and visualizes 4-parameter chaotic attractors.
+
+Users can specify different chaotic attractor equations and parameters
+to explore different attractor behaviors.
+
+Author: Alex Spigler
 """
 
 import numpy as np
@@ -77,68 +83,68 @@ EQUATION_LIBRARY = {
         "y_eq": "c * np.cos(a * x[i-1]) + np.cos(b * y[i-1])"
     },
     
-    # Self 1
-    "Self1": {
+    # Custom 1
+    "Custom1": {
         "x_eq": "np.sin(a * y[i-1]) + c * np.sin(a * x[i-1]**2)",
         "y_eq": "np.sin(b * x[i-1]) + d * np.cos(b * y[i-1]**2)"
     },
     
-    # Self 2
-    "Self2": {
+    # Custom 2
+    "Custom2": {
         "x_eq": "np.sin(a * y[i-1]) + c * np.sin(a * x[i-1]) * np.cos(2 * x[i-1])",
         "y_eq": "np.sin(b * x[i-1]) + d * np.cos(b * y[i-1]**2)"
     },
     
-    # Self 3
-    "Self3": {
+    # Custom 3
+    "Custom3": {
         "x_eq": "np.sin(b * np.cos(a * x[i-1] * y[i-1])) - np.sin(d * y[i-1])",
         "y_eq": "np.cos(c * np.sin(b * x[i-1] * y[i-1])) + np.cos(a * x[i-1])"
     },
     
-    # Self 4
-    "Self4": {
+    # Custom 4
+    "Custom4": {
         "x_eq": "a * np.sin(b * np.tan(c * x[i-1])) + d * np.tan(c * np.cos(b * y[i-1]))",
         "y_eq": "a * np.tan(b * np.cos(c * x[i-1])) + d * np.sin(c * np.tan(b * x[i-1]))"
     },
     
-    # Self 5
-    "Self5": {
+    # Custom 5
+    "Custom5": {
         "x_eq": "np.sin(a * np.exp(np.sin(b * y[i-1]))) + c * np.cos(a * x[i-1])",
         "y_eq": "np.sin(b * np.exp(np.sin(b * x[i-1]))) + d * np.cos(b * y[i-1])"
     },
     
-    # Self 6
-    "Self6": {
+    # Custom 6
+    "Custom6": {
         "x_eq": "np.sin(np.cos(a * y[i-1])) + c * np.cos(a * x[i-1])",
         "y_eq": "np.sin(np.cos(b * x[i-1])) + d * np.cos(b * y[i-1])"
     },
     
-    # Self 7
-    "Self7": {
+    # Custom 7
+    "Custom7": {
         "x_eq": "b * np.sin(a * y[i-1]) + c * np.cos(d * x[i-1])",
         "y_eq": "a * np.sin(b * x[i-1]) + d * np.cos(c * y[i-1])"
     },
     
-    # Self 8
-    "Self8": {
+    # Custom 8
+    "Custom8": {
         "x_eq": "a * (np.exp(np.cos(x[i-1])) - np.pi / 2) + b * (np.exp(np.sin(y[i-1])) - np.pi / 2)",
         "y_eq": "c * np.sin(x[i-1]) * np.cos(2 * y[i-1]) + d * np.sin(y[i-1]) * np.cos(2 * x[i-1])"
     },
     
-    # Self 9
-    "Self9": {
+    # Custom 9
+    "Custom9": {
         "x_eq": "a * (np.exp(np.cos(x[i-1])) - np.pi / 2) + b * (np.exp(np.sin(y[i-1])) - np.pi / 2)",
         "y_eq": "c * (np.exp(np.sin(x[i-1])) - np.pi / 2) + d * (np.exp(np.cos(y[i-1])) - np.pi / 2)"
     },
     
-    # Self 10
-    "Self10": {
+    # Custom 10
+    "Custom10": {
         "x_eq": "a * np.exp(np.arcsinh(x[i-1])) - b * np.exp(np.sin(y[i-1]))",
         "y_eq": "c * np.exp(np.arcsinh(y[i-1])) - d * np.exp(np.sin(x[i-1]))"
     },
     
-    # Self 11 (x_0, y_0 != 0, 0)
-    "Self11": {
+    # Custom 11 (x_0, y_0 != 0, 0)
+    "Custom11": {
         "x_eq": "x[i-1]**2 - y[i-1]**2 + a * np.sin(x[i-1]) + b * np.sin(b * y[i-1])",
         "y_eq": "a * x[i-1] * y[i-1] + c * x[i-1] + d * np.sin(y[i-1])"
     }
@@ -473,7 +479,7 @@ def create_attractor_with_info(data, output_file, equation_id,
                           top=0.95, bottom=0.05)
     
     # Main attractor plot
-    ax_main = fig.add_subplot([0, 0])
+    ax_main = fig.add_subplot(gs[0, 0])
     
     # Get colormap
     color_method = plot_kwargs.get('color_method', COLOR_METHOD)
@@ -493,7 +499,7 @@ def create_attractor_with_info(data, output_file, equation_id,
     ax_main.set_facecolor(background_color)
     
     # Text panel
-    ax_text = fig.add_subplot(gs[3, 0])
+    ax_text = fig.add_subplot(gs[1, 0])
     ax_text.axis('off')
     ax_text.set_facecolor(background_color)
     
