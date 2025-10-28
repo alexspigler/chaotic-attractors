@@ -394,7 +394,7 @@ def save_attractor(data,
         
         if include_info and equation_id:
             # Create figure with info panel
-            fig, saved_file = create_attractor_with_info(
+            fig, saved_file = create_attractor_with_eq(
                 data, output_file, equation_id,
                 point_size, alpha, **plot_kwargs)
         else:
@@ -431,7 +431,7 @@ def convert_to_math_text(eq_str):
     return eq_str
 
 
-def create_attractor_with_info(data, output_file, equation_id,
+def create_attractor_with_eq(data, output_file, equation_id,
                                point_size=POINT_SIZE_DEFAULT,
                                alpha=ALPHA_DEFAULT,
                                **plot_kwargs):
@@ -592,4 +592,4 @@ if __name__ == "__main__":
     
     print("\nDone! Created:")
     print("  - Standard versions: attractor_output.[png/pdf/svg]")
-    print("  - Equation versions: attractor_with_info.[png/pdf/svg]")
+    print("  - Equation versions: attractor_with_eq.[png/pdf/svg]")
