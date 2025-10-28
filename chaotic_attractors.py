@@ -225,10 +225,12 @@ def prepare_attractor_data(params, equation_id, n_iterations=ITERATIONS_DEFAULT)
         kde = gaussian_kde(np.vstack([x_sample, y_sample]))
         density = kde(np.vstack([x, y]))
         
+        print(f"Initial Density Range: {density.min():.4f} to {density.max():.4f}")
+        
         # Normalize density
         density = (density - density.min()) / (density.max() - density.min())
         
-        print(f"Density Range: {density.min():.4f} to {density.max():.4f}")
+        print(f"Normalized Density Range: {density.min():.4f} to {density.max():.4f}")
         
     except Exception as e:
         print(f"Warning: Could not compute KDE density: {e}")
