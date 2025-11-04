@@ -14,6 +14,7 @@ import matplotlib.pyplot as plt
 from matplotlib.colors import LinearSegmentedColormap
 from scipy.stats import gaussian_kde
 import os
+import re
 
 # ===================================================
 # Configuration Parameters
@@ -21,8 +22,8 @@ import os
 
 # Iteration settings
 ITERATIONS_DEFAULT = 2_000_000
-X_START = 0.0
-Y_START = 0.0
+X_START = -0.72
+Y_START = -0.64
 
 # Visualization settings
 ALPHA_DEFAULT = 0.3  # 0.0 - 1.0 (fully opaque)
@@ -36,17 +37,18 @@ VIRIDIS_PALETTE = "plasma"
 
 # Gradient settings
 GRADIENT_LOW = "lightblue"
-GRADIENT_HIGH = "purple"
+GRADIENT_HIGH = "darkviolet"
 
 # Gradient3 settings
 GRADIENT3_LOW = "lightblue"
-GRADIENT3_MID = "purple"
-GRADIENT3_HIGH = "pink"
-GRADIENT3_MIDPOINT = 0.7
+GRADIENT3_MID = "darkviolet"
+GRADIENT3_HIGH = "blue"
+GRADIENT3_MIDPOINT = 0.4
 
-# GradientN settings
-GRADIENTN_COLORS = ["lightblue", "pink", "purple", "darkgreen"]
-GRADIENTN_VALUES = [0, 0.45, 0.65, 0.9]
+# GradientN settings (make sure first value is 0, and last value is 1)
+GRADIENTN_COLORS = ["aliceblue", "lightblue", "darkviolet", "purple"]
+GRADIENTN_VALUES = [0, 0.2, 0.65, 1]
+
 
 # ===================================================
 # Equation Library
@@ -85,66 +87,24 @@ EQUATION_LIBRARY = {
     
     # Custom 1
     "Custom1": {
-        "x_eq": "np.sin(a * y[i-1]) + c * np.sin(a * x[i-1]**2)",
-        "y_eq": "np.sin(b * x[i-1]) + d * np.cos(b * y[i-1]**2)"
-    },
-    
-    # Custom 2
-    "Custom2": {
-        "x_eq": "np.sin(a * y[i-1]) + c * np.sin(a * x[i-1]) * np.cos(2 * x[i-1])",
-        "y_eq": "np.sin(b * x[i-1]) + d * np.cos(b * y[i-1]**2)"
-    },
-    
-    # Custom 3
-    "Custom3": {
-        "x_eq": "np.sin(b * np.cos(a * x[i-1] * y[i-1])) - np.sin(d * y[i-1])",
-        "y_eq": "np.cos(c * np.sin(b * x[i-1] * y[i-1])) + np.cos(a * x[i-1])"
-    },
-    
-    # Custom 4
-    "Custom4": {
-        "x_eq": "a * np.sin(b * np.tan(c * x[i-1])) + d * np.tan(c * np.cos(b * y[i-1]))",
-        "y_eq": "a * np.tan(b * np.cos(c * x[i-1])) + d * np.sin(c * np.tan(b * x[i-1]))"
-    },
-    
-    # Custom 5
-    "Custom5": {
-        "x_eq": "np.sin(a * np.exp(np.sin(b * y[i-1]))) + c * np.cos(a * x[i-1])",
-        "y_eq": "np.sin(b * np.exp(np.sin(b * x[i-1]))) + d * np.cos(b * y[i-1])"
-    },
-    
-    # Custom 6
-    "Custom6": {
         "x_eq": "np.sin(np.cos(a * y[i-1])) + c * np.cos(a * x[i-1])",
         "y_eq": "np.sin(np.cos(b * x[i-1])) + d * np.cos(b * y[i-1])"
     },
     
-    # Custom 7
-    "Custom7": {
-        "x_eq": "b * np.sin(a * y[i-1]) + c * np.cos(d * x[i-1])",
-        "y_eq": "a * np.sin(b * x[i-1]) + d * np.cos(c * y[i-1])"
-    },
-    
-    # Custom 8
-    "Custom8": {
-        "x_eq": "a * (np.exp(np.cos(x[i-1])) - np.pi / 2) + b * (np.exp(np.sin(y[i-1])) - np.pi / 2)",
-        "y_eq": "c * np.sin(x[i-1]) * np.cos(2 * y[i-1]) + d * np.sin(y[i-1]) * np.cos(2 * x[i-1])"
-    },
-    
-    # Custom 9
-    "Custom9": {
+    # Custom 2
+    "Custom2": {
         "x_eq": "a * (np.exp(np.cos(x[i-1])) - np.pi / 2) + b * (np.exp(np.sin(y[i-1])) - np.pi / 2)",
         "y_eq": "c * (np.exp(np.sin(x[i-1])) - np.pi / 2) + d * (np.exp(np.cos(y[i-1])) - np.pi / 2)"
     },
     
-    # Custom 10
-    "Custom10": {
+    # Custom 3
+    "Custom3": {
         "x_eq": "a * np.exp(np.arcsinh(x[i-1])) - b * np.exp(np.sin(y[i-1]))",
         "y_eq": "c * np.exp(np.arcsinh(y[i-1])) - d * np.exp(np.sin(x[i-1]))"
     },
     
-    # Custom 11 (x_0, y_0 != 0, 0)
-    "Custom11": {
+    # Custom 4 (x_0, y_0 != 0, 0)
+    "Custom4": {
         "x_eq": "x[i-1]**2 - y[i-1]**2 + a * np.sin(x[i-1]) + b * np.sin(b * y[i-1])",
         "y_eq": "a * x[i-1] * y[i-1] + c * x[i-1] + d * np.sin(y[i-1])"
     }
@@ -337,25 +297,6 @@ def plot_chaotic(data,
     return fig, ax
 
 
-def format_equation_for_display(equation_id):
-    """
-    Format equations to add to attractor plot
-    
-    Args:
-        equation_id: str, equation name
-        
-    Returns:
-        tuple: (x_equation_str, y_equation_str)
-    """
-    eqs = EQUATION_LIBRARY[equation_id]
-    
-    # Clean up for display
-    x_eq = eqs['x_eq'].replace('np.', '').replace('[i-1]', '(i)')
-    y_eq = eqs['y_eq'].replace('np.', '').replace('[i-1]', '(i)')
-    
-    return x_eq, y_eq
-
-
 def save_attractor(data,
                   filename, 
                   point_size=POINT_SIZE_DEFAULT,
@@ -425,10 +366,36 @@ def save_attractor(data,
 
 
 def convert_to_math_text(eq_str):
-    """Convert equation string to matplotlib math text format"""
+    """
+    Convert python equation string to matplotlib math text format
+    
+    Args:
+        eq_str: str, equation string
+        
+    Returns:
+        str: formatted equation string with matplotlib math text syntax
+    """    
+    # Remove Python-specific syntax
+    eq_str = eq_str.replace('np.', '')
+    eq_str = eq_str.replace('[i-1]', '_i')  # Directly to subscript
+    
+    # Convert to math notation
     eq_str = eq_str.replace(' * ', r' \cdot ')
+    eq_str = eq_str.replace('arcsinh(', r'\mathrm{arcsinh}(')
+    eq_str = eq_str.replace('arccosh(', r'\mathrm{arccosh}(')
+    eq_str = eq_str.replace('arctanh(', r'\mathrm{arctanh}(')
+    eq_str = eq_str.replace('arcsin(', r'\arcsin(')
+    eq_str = eq_str.replace('arccos(', r'\arccos(')
+    eq_str = eq_str.replace('arctan(', r'\arctan(')
+    eq_str = eq_str.replace('sinh(', r'\sinh(')
+    eq_str = eq_str.replace('cosh(', r'\cosh(')
+    eq_str = eq_str.replace('tanh(', r'\tanh(')
+    eq_str = eq_str.replace('sin(', r'\sin(')
+    eq_str = eq_str.replace('cos(', r'\cos(')
+    eq_str = eq_str.replace('tan(', r'\tan(')
     eq_str = eq_str.replace('exp(', r'\exp(')
-    eq_str = eq_str.replace('(i)', '_i')
+    eq_str = eq_str.replace('pi', r'\pi')
+    eq_str = re.sub(r'\*\*(\d+)', r'^{\1}', eq_str)
     
     return eq_str
 
@@ -461,7 +428,12 @@ def create_attractor_with_eq(data, output_file, equation_id,
     aspect_ratio = x_range / y_range
     
     # Get equations for display
-    x_eq_str, y_eq_str = format_equation_for_display(equation_id)
+    x_eq_raw = EQUATION_LIBRARY[equation_id]['x_eq']
+    y_eq_raw = EQUATION_LIBRARY[equation_id]['y_eq']
+
+    # Convert to math text
+    x_eq_math = convert_to_math_text(x_eq_raw)
+    y_eq_math = convert_to_math_text(y_eq_raw)
     
     # Create figure with space for text below
     figsize = plot_kwargs.get('figsize', None)
@@ -505,10 +477,6 @@ def create_attractor_with_eq(data, output_file, equation_id,
     ax_text.axis('off')
     ax_text.set_facecolor(background_color)
     
-    # Build info text - formatted with matplotlib math rendering
-    x_eq_math = convert_to_math_text(x_eq_str)
-    y_eq_math = convert_to_math_text(y_eq_str)
-
     info_lines = []
     info_lines.append(rf"$x_{{i+1}} = {x_eq_math}$")
     info_lines.append(rf"$y_{{i+1}} = {y_eq_math}$")
@@ -549,14 +517,14 @@ def create_attractor_with_eq(data, output_file, equation_id,
 
 if __name__ == "__main__":
     # Set equation
-    ACTIVE_EQUATION = "Clifford"
+    ACTIVE_EQUATION = "Tinkerbell"
     
     # Set parameters
     params = {
-        'a': 2.1,
-        'b': -0.8,
-        'c': -0.2,
-        'd': 2.5
+        'a': 0.9,
+        'b': -0.6013,
+        'c': 2,
+        'd': 0.5
     }
     
     print(f"Generating attractor: {ACTIVE_EQUATION}")
@@ -592,6 +560,4 @@ if __name__ == "__main__":
                   low=GRADIENT_LOW,
                   high=GRADIENT_HIGH)
     
-    print("\nDone! Created:")
-    print("  - Standard versions: attractor_output.[png/pdf/svg]")
-    print("  - Equation versions: attractor_with_eq.[png/pdf/svg]")
+    print("\nDone!")
