@@ -63,9 +63,11 @@ pip install numpy scipy matplotlib
 python chaotic_attractors.py
 ```
 The default run will plot the famous Tinkerbell attractor using 2M iterations and the parameters:  
-$$a=0.9 \text{,}\quad b=-0.6013 \text{,}\quad c=2 \text{,}\quad d=0.5$$  
+$$a=0.9 \text{,}\quad b=-0.6013 \text{,}\quad c=2 \text{,}\quad d=0.5$$
+
 and the starting position:  
-$$x_0=-0.72 \text{, } y_0=-0.64$$  
+$$x_0=-0.72 \text{, } y_0=-0.64$$
+
 Output files are saved in the current directory as PNG, PDF, and SVG formats.
 
 ### Basic Usage
