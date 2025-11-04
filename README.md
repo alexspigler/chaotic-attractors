@@ -22,9 +22,11 @@ This program generates publication-quality visualizations of chaotic attractors 
   <img src="images/Custom3.png" width="270"/>
 </p>
 
-**Top Left:** Tinkerbell, &nbsp; $a=0.9$, &nbsp; $b=-0.6013$, &nbsp; $c=2$ &nbsp;, $d=0.5$, &nbsp; $x_0=-0.72$, &nbsp; $y_0=-0.64$  
-**Top Right:** Custom2, &nbsp; $a = 0.73$, &nbsp; $b = - 2.6$, &nbsp; $c = 2.31$, &nbsp; $d = 1.65$, &nbsp; $x_0=0$, &nbsp; $y_0=0$  
-**Bottom:** Custom3, &nbsp; $a= -2.17$, &nbsp; $b = -2.7$, &nbsp; $c = - 2.08$, &nbsp; $d = -2.83$, &nbsp; $x_0=0$, &nbsp; $y_0=0$  
+**Left:** Tinkerbell, &nbsp; $a=0.9$, &nbsp; $b=-0.6013$, &nbsp; $c=2$ &nbsp;, $d=0.5$, &nbsp; $x_0=-0.72$, &nbsp; $y_0=-0.64$  
+**Middle:** Custom2, &nbsp; $a = 0.73$, &nbsp; $b = - 2.6$, &nbsp; $c = 2.31$, &nbsp; $d = 1.65$, &nbsp; $x_0=0$, &nbsp; $y_0=0$  
+**Right:** Custom3, &nbsp; $a= -2.17$, &nbsp; $b = -2.7$, &nbsp; $c = - 2.08$, &nbsp; $d = -2.83$, &nbsp; $x_0=0$, &nbsp; $y_0=0$  
+
+**Note:** On mobile devices, images may appear stacked vertically rather than side-by-side.
 
 ## Methodology
 
@@ -75,16 +77,16 @@ To explore different attractors, open `chaotic_attractors.py` and edit the appro
 
 1. **Select an attractor equation:**
 ```python
-ACTIVE_EQUATION = "Custom3"
+ACTIVE_EQUATION = "Custom4"
 ```
 
 2. **Set parameters:**
 ```python
 params = {
-    'a': -2.17,
-    'b': -2.7,
-    'c': -2.08,
-    'd': -2.83
+    'a': -1.2,
+    'b': -0.05,
+    'c': 0.55,
+    'd': -1.43
 }
 ```
 
@@ -102,7 +104,7 @@ ITERATIONS_DEFAULT = 2_000_000
 ```
 
 ### Starting Position
-Some attractors (e.g., Tinkerbell) require non-zero starting points:
+Some attractors (e.g., Tinkerbell, Custom4) require non-zero starting points:
 ```python
 X_START = 0.5
 Y_START = 0.5
