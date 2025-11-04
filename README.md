@@ -17,14 +17,14 @@ This program generates publication-quality visualizations of chaotic attractors 
 ## Gallery
 
 <p align="center">
-  <img src="images/tinkerbell.png" width="270"/>
-  <img src="images/custom2.png" width="270"/>
-  <img src="images/custom3.png" width="270"/>
+  <img src="images/Tinkerbell.png" width="270"/>
+  <img src="images/Custom2.png" width="270"/>
+  <img src="images/Custom3.png" width="270"/>
 </p>
 
-**Top Left:** Tinkerbell, &nbsp; $a=0.9$, &nbsp; $b=-0.6013$, &nbsp; $c=2$ &nbsp;, $d=0.5$, &nbsp; $x_0=-0.72$, &nbsp; $y_0=-0.64$
-**Top Right:** Custom2, &nbsp; $a = 0.73$, &nbsp; $b = - 2.6$, &nbsp; $c = 2.31$, &nbsp; $d = 1.65$, &nbsp; $x_0=0$, &nbsp; $y_0=0$
-**Bottom:** Custom3, &nbsp; $a= -2.17$, &nbsp; $b = -2.7$, &nbsp; $c = - 2.08$, &nbsp; $d = -2.83$, &nbsp; $x_0=0$, &nbsp; $y_0=0$
+**Top Left:** Tinkerbell, &nbsp; $a=0.9$, &nbsp; $b=-0.6013$, &nbsp; $c=2$ &nbsp;, $d=0.5$, &nbsp; $x_0=-0.72$, &nbsp; $y_0=-0.64$  
+**Top Right:** Custom2, &nbsp; $a = 0.73$, &nbsp; $b = - 2.6$, &nbsp; $c = 2.31$, &nbsp; $d = 1.65$, &nbsp; $x_0=0$, &nbsp; $y_0=0$  
+**Bottom:** Custom3, &nbsp; $a= -2.17$, &nbsp; $b = -2.7$, &nbsp; $c = - 2.08$, &nbsp; $d = -2.83$, &nbsp; $x_0=0$, &nbsp; $y_0=0$  
 
 ## Methodology
 
