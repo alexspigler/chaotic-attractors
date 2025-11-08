@@ -19,9 +19,9 @@ A Python framework for discovering and visualizing 4-parameter chaotic dynamical
 **From left to right:** Tinkerbell, Custom2, and Custom3
 | Equation | Parameters | Initial Position |
 |-----------|-------------|---------------|
-| **Tinkerbell** | $a=0.9, \; b=-0.6013, \; c=2.0, \; d=0.5$ | $x_0=-0.72, \; y_0=-0.64$ |
-| **Custom2**    | $a=0.73, \; b=-2.6, \; c=2.31, \; d=1.65$ | $x_0=0, \; y_0=0$ |
-| **Custom3**    | $a=-2.17, \; b=-2.7, \; c=-2.08, \; d=-2.83$ | $x_0=0, \; y_0=0$ |
+| **Tinkerbell** | $a=0.9, b=-0.6013, c=2.0, d=0.5$ | $x_0=-0.72, y_0=-0.64$ |
+| **Custom2**    | $a=0.73, b=-2.6, c=2.31, d=1.65$ | $x_0=0, y_0=0$ |
+| **Custom3**    | $a=-2.17, b=-2.7, c=-2.08, d=-2.83$ | $x_0=0, y_0=0$ |
 
 ---
 
@@ -29,11 +29,11 @@ A Python framework for discovering and visualizing 4-parameter chaotic dynamical
 
 This project implements a computational pipeline for generating, filtering, and visualizing chaotic attractors---complex fractal structures that emerge from deterministic iterative systems. The toolkit features:
 
-- **Automated Discovery**: Monte Carlo parameter search across 4-dimensional space with ~20,000 evaluations
+- **Automated Discovery**: Stochastic parameter search across 4-dimensional space
 - **Statistical Filtering**: Multi-criteria quality assessment using geometric properties and uniqueness metrics
 - **High-Performance Computation**: Vectorized NumPy operations generating 2M+ trajectory points
 - **Density Estimation**: Gaussian kernel density estimation (KDE) for structure-revealing visualization
-- **Production Pipeline**: Comprehensive testing (52 unit tests), modular architecture, and publication-ready exports
+- **Production Pipeline**: Comprehensive testing (50+ unit tests), modular architecture, and publication-ready exports
 
 **Technical Highlights:**
 - Efficient iterative map evaluation with runtime equation compilation
@@ -191,9 +191,9 @@ chaotic-attractors/
 ├── chaotic_attractors/          # Main package
 │   ├── __init__.py              # Public API exports
 │   ├── __main__.py              # CLI interface with argparse
-│   ├── core.py                  # Generation, KDE, visualization (552 lines)
+│   ├── core.py                  # Generation, KDE, visualization
 │   ├── equations.py             # System definitions (9 attractors)
-│   └── search.py                # Monte Carlo search & filtering (476 lines)
+│   └── search.py                # Stochastic search & filtering
 ├── tests/                       # Comprehensive test suite
 │   ├── test_core.py             # Core generation logic
 │   ├── test_equations.py        # Equation compilation
@@ -230,7 +230,7 @@ chaotic-attractors/
 
 ## Testing & Validation
 
-Unit tests across 3 modules ensuring code quality and correctness:
+50+ unit tests across 3 modules ensuring code quality and correctness:
 
 * `test_core.py`: Generation, KDE, visualization, Matplotlib conversion
 * `test_equations.py`: All 9 systems validated, parametrized tests
