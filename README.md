@@ -254,7 +254,7 @@ Test configuration in `pyproject.toml` automatically enables verbose output, cov
 
 **Stability:** NaN/Inf filtering, minimum point thresholds, restricted eval namespace
 
-**Reproducibility:** Fixed random seeds, deterministic sampling, CSV logging
+**Reproducibility:** Deterministic sampling, CSV logging
 
 ---
 
