@@ -1,18 +1,11 @@
-# Chaotic-Attractors
+# Chaotic Attractors: Computational Exploration & Visualization
 
-A Python application for generating and visualizing 4-parameter chaotic attractors using iterative nonlinear dynamical systems.
+A Python framework for discovering and visualizing 4-parameter chaotic dynamical systems through algorithmic parameter space exploration and statistical quality filtering.
 
-## Project Overview
+[![Python](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-This program generates publication-quality visualizations of chaotic attractors by computing millions of iterations from nonlinear recursive equations. Despite deterministic rules, these systems produce intricate, unpredictable patterns.
-
-**Key Features:**
-- 5 classic attractor equations (Clifford, Tinkerbell, Fractal Dreams, Peter de Jong, and Johnny Svensson)
-- 4 custom-discovered dynamical systems
-- Density-based coloring using Gaussian KDE
-- Multiple export formats (PNG, PDF, SVG)
-- Automatic equation labeling with proper mathematical formatting
-- Configurable parameters for exploration
+---
 
 ## Gallery
 
@@ -22,142 +15,241 @@ This program generates publication-quality visualizations of chaotic attractors 
   <img src="images/Custom3.png" width="270"/>
 </p>
 
-**Left:** Tinkerbell, &nbsp; $a=0.9$, &nbsp; $b=-0.6013$, &nbsp; $c=2$ &nbsp;, $d=0.5$, &nbsp; $x_0=-0.72$, &nbsp; $y_0=-0.64$  
-**Middle:** Custom2, &nbsp; $a = 0.73$, &nbsp; $b = - 2.6$, &nbsp; $c = 2.31$, &nbsp; $d = 1.65$, &nbsp; $x_0=0$, &nbsp; $y_0=0$  
-**Right:** Custom3, &nbsp; $a= -2.17$, &nbsp; $b = -2.7$, &nbsp; $c = - 2.08$, &nbsp; $d = -2.83$, &nbsp; $x_0=0$, &nbsp; $y_0=0$  
+**Tinkerbell Attractor** | $a=0.9, b=-0.6013, c=2.0, d=0.5$ | **Custom2** | $a=0.73, b=-2.6, c=2.31, d=1.65$ | **Custom3** | $a=-2.17, b=-2.7, c=-2.08, d=-2.83$
 
-**Note:** On mobile devices, images may appear stacked vertically rather than side-by-side.
+---
 
-## Methodology
+## Overview
 
-The program uses a three-stage pipeline:
+This project implements a computational pipeline for generating, filtering, and visualizing chaotic attractors---complex fractal structures that emerge from deterministic iterative systems. The toolkit features:
 
-1. **Iteration** - Generate a default 2M coordinate pairs using recursive equations of the form:
-   - $x_{i+1}=f(x_i,y_i,a,b,c,d)$
-   - $y_{i+1}=g(x_i,y_i,a,b,c,d)$
+- **Automated Discovery**: Monte Carlo parameter search across 4-dimensional space with ~20,000 evaluations
+- **Statistical Filtering**: Multi-criteria quality assessment using geometric properties and uniqueness metrics
+- **High-Performance Computation**: Vectorized NumPy operations generating 2M+ trajectory points
+- **Density Estimation**: Gaussian kernel density estimation (KDE) for structure-revealing visualization
+- **Production Pipeline**: Comprehensive testing (52 unit tests), modular architecture, and publication-ready exports
 
-2. **Density Calculation** - Apply Gaussian kernel density estimation (KDE) to reveal structure in the point cloud
+**Technical Highlights:**
+- Efficient iterative map evaluation with runtime equation compilation
+- Multi-stage filtering (divergence, collapse, aspect ratio, uniqueness) to reject uninteresting/unviable candidates
+- Custom scoring function balancing geometric and statistical criteria
+- Publication-quality output in multiple formats (PNG, PDF, SVG)
 
-3. **Visualization** - Map density values to custom color gradients with configurable transparency and point size
+---
 
 ## Mathematical Background
 
-Chaotic attractors are bounded regions in phase space where deterministic systems exhibit sensitive dependence on initial conditions. Despite their chaotic behavior, these systems produce intricate geometric structures with fractal-like properties.
+Chaotic attractors are generated through discrete-time dynamical systems:
 
-## Technologies
+$$x_{n+1} = f(x_n, y_n; a, b, c, d)$$
+$$y_{n+1} = g(x_n, y_n; a, b, c, d)$$
 
-**Language:** Python
+where $(x_0, y_0)$ are initial conditions and $(a, b, c, d)$ are system parameters.
 
-**Core Libraries:**
-- `NumPy` - Fast array operations for multi-million point trajectories
-- `SciPy` - Gaussian KDE for density estimation
-- `Matplotlib` - Publication-quality plotting with custom colormaps
+### Example Systems
 
-## Quick Start
+**Tinkerbell:**
+- $x_{n+1} = x_n^2 - y_n^2 + ax_n + by_n$
+- $y_{n+1} = 2x_ny_n + cx_n + dy_n$
 
-### Prerequisites
-```bash
-pip install numpy scipy matplotlib
-```
+**Clifford:**
+- $x_{n+1} = \sin(ay_n) + c\cos(ax_n)$
+- $y_{n+1} = \sin(bx_n) + d\cos(by_n)$
 
-### Default Run
-```bash
-python chaotic_attractors.py
-```
-The default run will plot the famous Tinkerbell attractor using 2M iterations and the parameters:  
-$$a=0.9 \text{,}\quad b=-0.6013 \text{,}\quad c=2 \text{,}\quad d=0.5$$
-
-and the starting position:  
-$$x_0=-0.72 \text{, } y_0=-0.64$$
-
-Output files are saved in the current directory as PNG, PDF, and SVG formats.
-
-### Basic Usage
-To explore different attractors, open `chaotic_attractors.py` and edit the appropriate lines:
-
-1. **Select an attractor equation:**
-```python
-ACTIVE_EQUATION = "Custom4"
-```
-
-2. **Set parameters:**
-```python
-params = {
-    'a': -1.2,
-    'b': -0.05,
-    'c': 0.55,
-    'd': -1.43
-}
-```
-
-3. **Run:**
-```bash
-python chaotic_attractors.py
-```
-
-## Configuration
-
-### Iteration Count
-Higher iterations produce smoother results but require more memory:
-```python
-ITERATIONS_DEFAULT = 2_000_000
-```
-
-### Starting Position
-Some attractors (e.g., Tinkerbell, Custom4) require non-zero starting points:
-```python
-X_START = 0.5
-Y_START = 0.5
-```
-
-### Color Schemes
-Choose from built-in palettes or custom gradients:
-```python
-COLOR_METHOD = "gradient"  # Options: "viridis", "gradient", "gradient3", "gradientn"
-
-GRADIENT_LOW = "lightblue"
-GRADIENT_HIGH = "darkviolet"
-```
-
-## Available Attractors
-
-### Classic Systems
-- **Clifford**
-- **Tinkerbell**
-- **Fractal Dreams**
-- **Peter de Jong**
-- **Johnny Svensson** 
-
-### Custom Discoveries
-- **Custom1, Custom2, Custom3, Custom4** - Novel attractors discovered through parameter exploration
-- Each produces visually distinct patterns and structural complexity
-
-## Output Files
-
-The program generates two versions of each visualization:
-
-1. **Standard** (`attractor_output.*`) - Clean visualization without annotations
-2. **Annotated** (`attractor_with_eq.*`) - Includes equations and parameters
-
-All files are saved in PNG (for sharing), PDF (for documents), and SVG (for scaling).
-
-## Implementation Details
-
-**Performance:**
-- Efficient computation using NumPy's optimized mathematical functions
-- KDE uses sampling to manage memory usage
-- Density normalization is used for consistent coloring
-
-**Numerical Stability:**
-- Automatic handling of NaN and Inf values through boolean masking
-- Validation check requiring a minimum of 10k valid points
-- Graceful degradation to uniform coloring if KDE fails
-
-## Technical Notes
-
-- The program uses `eval()` for runtime equation selection from the equation library
-- Point generation is sequential (not parallelized) due to recursive dependencies
-- Color gradients use matplotlib's `LinearSegmentedColormap` for smooth transitions
-- Automatic equation labeling uses matplotlib's math text parser
+The library includes 9 equation systems: 5 classical attractors (Clifford, Tinkerbell, Fractal Dreams, Peter de Jong, Johnny Svensson) and 4 custom-designed variants.
 
 ---
+
+## Key Features
+
+### 1. Automated Parameter Discovery
+Random search algorithm with configurable bounds and precision:
+```python
+# Search for 15 high-quality attractors in specified parameter ranges
+python -m chaotic_attractors.__main__ --mode search \
+    --equation Clifford \
+    --range-min -3.0 --range-max 3.0 \
+    --decimals 2
+```
+
+**Algorithm workflow:**
+1. Sample parameters uniformly from discrete grid (e.g., 0.01 precision -- roughly 13 billion possible combinations)
+2. Generate 10K test points for rapid evaluation
+3. Apply multi-stage filtering:
+   - **Divergence check**: Reject if range > 500 units
+   - **Collapse check**: Reject if range < 0.25 units  
+   - **Periodicity filter**: Reject if unique point ratio < 0.25
+   - **Aspect ratio**: Reject if dimensions differ by >4×
+4. Regenerate accepted candidates at 2M points with a final check on full attractor plots
+5. Plot with custom color maps
+5. Export as PDFs with equation annotations + CSV parameter summary
+
+### 2. Quality Scoring System
+
+Attractors are ranked using a Mean Squared Error (MSE) metric that measures deviation from ideal characteristics:
+
+$$\text{score} = \left(\frac{r_{\text{aspect}} - r_{\text{ideal,aspect}}}{r_{\text{max}} - 1}\right)^2 + \left(\frac{r_{\text{unique}} - r_{\text{ideal,unique}}}{r_{\text{max,unique}} - r_{\text{min,unique}}}\right)^2$$
+
+**Parameters:**
+- $r_{\text{aspect}}$ = aspect ratio (longer dimension / shorter dimension)
+- $r_{\text{unique}}$ = fraction of unique points at 2 decimal precision
+- $r_{\text{ideal,aspect}} = 1.5$ (target aspect ratio for visual balance)
+- $r_{\text{ideal,unique}} = 0.75$ (target uniqueness to avoid periodic/chaotic extremes)
+- Acceptable ranges: aspect $\in [1.0, 4.0]$, unique $\in [0.25, 0.95]$
+
+**Interpretation:**
+- **Score = 0**: Perfect match to ideal characteristics
+- **Score < 0.1**: Excellent quality
+
+This is equivalent to computing Euclidean distance in normalized parameter space, where each criterion is scaled by its acceptable range to ensure fair weighting.
+
+### 3. Density-Based Visualization
+
+Implements Gaussian KDE for structure revelation:
+- Sample 50K points from full trajectory for computational efficiency
+- Compute probability density for all 2M points
+- Map density to custom colormaps (viridis, gradient, multi-stop)
+- Alpha blending and point sizing for aesthetic control
+
+---
+
+## Installation & Setup
+
+```bash
+# Clone repository
+git clone https://github.com/alexspigler/chaotic-attractors.git
+cd chaotic-attractors
+
+# Install package with dependencies
+pip install -e .
+
+# Or install with development tools (recommended for contributors)
+pip install -e ".[dev]"
+
+# Verify installation by running tests
+pytest
+```
+
+**Requirements:**
+- Python 3.8+
+- NumPy, SciPy, Matplotlib (installed automatically)
+- pytest, pytest-cov (included with `[dev]` installation)
+
+---
+
+## Usage Examples
+
+### Generate Single Attractor
+```python
+from chaotic_attractors import prepare_attractor_data, save_attractor
+
+# Define parameters
+params = {'a': 0.9, 'b': -0.6013, 'c': 2.0, 'd': 0.5}
+
+# Generate 2M points with density calculation
+data = prepare_attractor_data(params, equation_id='Tinkerbell')
+
+# Save in multiple formats with equation panel
+save_attractor(
+    data,
+    filename='my_attractor',
+    save_format='all',  # PNG, PDF, SVG
+    include_info=True,
+    equation_id='Tinkerbell'
+)
+```
+
+### Command-Line Interface
+```bash
+# Default Tinkerbell parameters
+python -m chaotic_attractors.__main__
+
+# Custom parameters
+python -m chaotic_attractors.__main__ \
+    --a 0.9 --b -0.6 --c 2.0 --d 0.5 \
+    --equation Tinkerbell
+
+# Parameter space search
+python -m chaotic_attractors.__main__ \
+    --mode search \
+    --equation Clifford \
+    --range-min -2.5 --range-max 2.5 \
+    --decimals 2
+```
+---
+
+## Project Architecture
+
+```
+chaotic-attractors/
+├── chaotic_attractors/          # Main package
+│   ├── __init__.py              # Public API exports
+│   ├── __main__.py              # CLI interface with argparse
+│   ├── core.py                  # Generation, KDE, visualization (552 lines)
+│   ├── equations.py             # System definitions (9 attractors)
+│   └── search.py                # Monte Carlo search & filtering (476 lines)
+├── tests/                       # Comprehensive test suite
+│   ├── test_core.py             # Core generation logic
+│   ├── test_equations.py        # Equation compilation
+│   └── test_search.py           # Parameter search & scoring
+├── images/                      # Example outputs
+├── .gitignore                   # Version control exclusions
+├── LICENSE                      # MIT License
+├── pytest.ini                   # Test runner configuration
+├── pyproject.toml               # Package metadata and build config
+└── README.md                    # Project documentation
+```
+
+### Module Responsibilities
+
+**`core.py`**: Numerical computation and rendering
+- Runtime equation compilation with restricted `eval` namespace
+- Vectorized trajectory generation
+- NaN/Inf filtering with early termination
+- Gaussian KDE on 50K subsamples
+- Custom colormap construction
+- Multi-format export with Matplotlib equation rendering
+
+**`search.py`**: Parameter space exploration
+- Discrete uniform sampling with fixed precision
+- Multi-criteria evaluation function
+- Automated file management and CSV logging
+- Progress tracking with timing statistics
+
+**`equations.py`**: System library
+- String-based equation definitions
+- Easy addition of new attractors
+
+---
+
+## Testing & Validation
+
+Unit tests across 3 modules ensuring code quality and correctness:
+
+* `test_core.py`: Generation, KDE, visualization, Matplotlib conversion
+* `test_equations.py`: All 9 systems validated, parametrized tests
+* `test_search.py`: Random sampling, evaluation, edge cases
+
+```bash
+# Run full test suite with coverage
+pytest
+
+# View detailed coverage report
+open htmlcov/index.html
+```
+
+Test configuration in `pyproject.toml` automatically enables verbose output, coverage measurement, and HTML report generation.
+
+---
+
+## Technical Highlights
+
+**Performance:** Pre-allocated arrays, early divergence detection, vectorized operations, O(n) KDE sampling
+
+**Stability:** NaN/Inf filtering, minimum point thresholds, restricted eval namespace
+
+**Reproducibility:** Fixed random seeds, deterministic sampling, CSV logging
+
+---
+
+**License**: MIT License - see [LICENSE](LICENSE) file for details.
