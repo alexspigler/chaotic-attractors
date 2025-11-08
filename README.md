@@ -15,7 +15,13 @@ A Python framework for discovering and visualizing 4-parameter chaotic dynamical
   <img src="images/Custom3.png" width="270"/>
 </p>
 
-**Tinkerbell Attractor** | $a=0.9, b=-0.6013, c=2.0, d=0.5$ | **Custom2** | $a=0.73, b=-2.6, c=2.31, d=1.65$ | **Custom3** | $a=-2.17, b=-2.7, c=-2.08, d=-2.83$
+
+**From left to right:** Tinkerbell, Custom2, and Custom3
+| Equation | Parameters | Initial Position |
+|-----------|-------------|---------------|
+| **Tinkerbell** | $a=0.9, \; b=-0.6013, \; c=2.0, \; d=0.5$ | $x_0=-0.72, \; y_0=-0.64$ |
+| **Custom2**    | $a=0.73, \; b=-2.6, \; c=2.31, \; d=1.65$ | $x_0=0, \; y_0=0$ |
+| **Custom3**    | $a=-2.17, \; b=-2.7, \; c=-2.08, \; d=-2.83$ | $x_0=0, \; y_0=0$ |
 
 ---
 
