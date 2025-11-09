@@ -157,8 +157,8 @@ def evaluate_attractor(
     min_small_side: float = 0.25,
     max_small_side: float = 500.0,
     digits_unique: int = 2,
-    min_unique_ratio: float = 0.1,
-    max_unique_ratio: float = 1,
+    min_unique_ratio: float = 0.02,
+    max_unique_ratio: float = 0.98,
     max_aspect_ratio: float = 4.0,
     iterations: int = None,
 ) -> Dict[str, Any]:
@@ -207,7 +207,7 @@ def evaluate_attractor(
     if x.size < 100 or y.size < 100:
         return {
             "score": -1.0,
-            "reason": "Too few points generated",
+            "reason": "Insufficient valid points",
         }
 
     x_diff = np.max(x) - np.min(x)
