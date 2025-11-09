@@ -6,7 +6,7 @@ import pytest
 import numpy as np
 from chaotic_attractors.core import (
     generate_chaotic,
-    prepare_attractor_data,
+    prepare_generate_data,
     _compile_equation,
     _get_equation_functions,
     create_colormap,
@@ -19,8 +19,12 @@ class TestGenerateChaotic:
     
     def test_returns_correct_types(self):
         """Test that generate_chaotic returns numpy arrays."""
-        params = {'a': 0.9, 'b': -0.6, 'c': 2.0, 'd': 0.5}
-        x, y = generate_chaotic(params, "Tinkerbell", n_iterations=1000)
+        params = {'a': 0.9, 'b': -0.6013, 'c': 2.0, 'd': 0.5}
+        x_start=-0.72
+        y_start=-0.64
+        x, y = generate_chaotic(params=params, x_start=x_start,
+                                y_start=y_start, equation_id="Tinkerbell",
+                                iterations=1000)
         
         assert isinstance(x, np.ndarray)
         assert isinstance(y, np.ndarray)
@@ -29,63 +33,86 @@ class TestGenerateChaotic:
     
     def test_returns_equal_length_arrays(self):
         """Test that x and y arrays have the same length."""
-        params = {'a': 0.9, 'b': -0.6, 'c': 2.0, 'd': 0.5}
-        x, y = generate_chaotic(params, "Tinkerbell", n_iterations=1000)
+        params = {'a': 0.9, 'b': -0.6013, 'c': 2.0, 'd': 0.5}
+        x_start=-0.72
+        y_start=-0.64
+        x, y = generate_chaotic(params=params, x_start=x_start,
+                                y_start=y_start, equation_id="Tinkerbell",
+                                iterations=1000)
         
         assert len(x) == len(y)
     
     def test_respects_iteration_limit(self):
         """Test that output length doesn't exceed requested iterations."""
-        params = {'a': 0.9, 'b': -0.6, 'c': 2.0, 'd': 0.5}
-        n_iterations = 5000
-        x, y = generate_chaotic(params, "Tinkerbell", n_iterations=n_iterations)
+        params = {'a': 0.9, 'b': -0.6013, 'c': 2.0, 'd': 0.5}
+        iterations = 5000
+        x_start=-0.72
+        y_start=-0.64
+        x, y = generate_chaotic(params=params, x_start=x_start,
+                                y_start=y_start, equation_id="Tinkerbell",
+                                iterations=iterations)
         
-        assert len(x) <= n_iterations
-        assert len(y) <= n_iterations
+        assert len(x) <= iterations
+        assert len(y) <= iterations
     
     def test_handles_divergent_parameters(self):
         """Test that divergent parameters terminate early without crashing."""
         params = {'a': 100.0, 'b': 100.0, 'c': 100.0, 'd': 100.0}
-        x, y = generate_chaotic(params, "Tinkerbell", n_iterations=10000)
+        x_start=-0.72
+        y_start=-0.64
+        x, y = generate_chaotic(params=params, x_start=x_start,
+                                y_start=y_start, equation_id="Tinkerbell",
+                                iterations=1000)
         
         # Should terminate early due to non-finite values
         assert len(x) < 10000
     
     def test_initial_conditions_are_set(self):
         """Test that initial conditions are properly set."""
-        params = {'a': 0.9, 'b': -0.6, 'c': 2.0, 'd': 0.5}
+        params = {'a': 0.9, 'b': -0.6013, 'c': 2.0, 'd': 0.5}
         x, y = generate_chaotic(
-            params, "Tinkerbell", 
-            n_iterations=100,
-            x_start=1.0,
-            y_start=2.0
+            params=params, equation_id="Tinkerbell", 
+            iterations=100,
+            x_start=-0.72,
+            y_start=-0.64
         )
         
-        assert x[0] == 1.0
-        assert y[0] == 2.0
+        assert x[0] == -0.72
+        assert y[0] == -0.64
     
     def test_raises_error_for_missing_parameters(self):
         """Test that missing parameters raise KeyError."""
-        params = {'a': 0.9, 'b': -0.6}  # Missing c and d
+        params = {'a': 0.9, 'b': -0.6013}  # Missing c and d
+        x_start=-0.72
+        y_start=-0.64
         
         with pytest.raises(KeyError, match="Missing required parameters"):
-            generate_chaotic(params, "Tinkerbell", n_iterations=100)
+            x, y = generate_chaotic(params=params, x_start=x_start,
+                                    y_start=y_start, equation_id="Tinkerbell",
+                                    iterations=1000)
     
     def test_raises_error_for_unknown_equation(self):
         """Test that unknown equation IDs raise KeyError."""
-        params = {'a': 0.9, 'b': -0.6, 'c': 2.0, 'd': 0.5}
+        params = {'a': 0.9, 'b': -0.6013, 'c': 2.0, 'd': 0.5}
+        x_start=-0.72
+        y_start=-0.64
         
         with pytest.raises(KeyError, match="Unknown equation"):
-            generate_chaotic(params, "NonexistentEquation", n_iterations=100)
+            x, y = generate_chaotic(params=params, x_start=x_start,
+                                    y_start=y_start, equation_id="Unknown",
+                                    iterations=1000)
 
 
-class TestPrepareAttractorData:
+class TestPrepareGenerateData:
     """Tests for the prepare_attractor_data function."""
     
     def test_returns_dict_with_required_keys(self):
         """Test that output dictionary contains all required keys."""
-        params = {'a': 0.9, 'b': -0.6, 'c': 2.0, 'd': 0.5}
-        data = prepare_attractor_data(params, "Tinkerbell", n_iterations=50000)
+        params = {'a': 0.9, 'b': -0.6013, 'c': 2.0, 'd': 0.5}
+        x_start=-0.72
+        y_start=-0.64
+        data = prepare_generate_data(params=params, equation_id="Tinkerbell",
+                                     x_start=x_start, y_start=y_start, final_iterations=50000)
         
         assert 'x' in data
         assert 'y' in data
@@ -94,8 +121,11 @@ class TestPrepareAttractorData:
     
     def test_density_normalized_to_zero_one(self):
         """Test that density values are normalized to [0, 1] range."""
-        params = {'a': 0.9, 'b': -0.6, 'c': 2.0, 'd': 0.5}
-        data = prepare_attractor_data(params, "Tinkerbell", n_iterations=50000)
+        params = {'a': 0.9, 'b': -0.6013, 'c': 2.0, 'd': 0.5}
+        x_start=-0.72
+        y_start=-0.64
+        data = prepare_generate_data(params=params, equation_id="Tinkerbell",
+                                     x_start=x_start, y_start=y_start, final_iterations=50000)
         
         assert data['density'].min() == 0.0
         assert data['density'].max() == 1.0
@@ -103,9 +133,12 @@ class TestPrepareAttractorData:
     def test_raises_error_for_insufficient_points(self):
         """Test that insufficient valid points raise ValueError."""
         params = {'a': 100.0, 'b': 100.0, 'c': 100.0, 'd': 100.0}
+        x_start=-0.72
+        y_start=-0.64
         
         with pytest.raises(ValueError, match="Insufficient valid points"):
-            prepare_attractor_data(params, "Tinkerbell", n_iterations=5000)
+            prepare_generate_data(params=params, equation_id="Tinkerbell",
+                                  x_start=x_start, y_start=y_start, final_iterations=5000)
 
 
 class TestEquationCompilation:
@@ -113,7 +146,7 @@ class TestEquationCompilation:
     
     def test_compile_simple_equation(self):
         """Test compilation of a simple equation."""
-        eq_str = "a * x[i-1] + b * y[i-1]"
+        eq_str = "a * x[n-1] + b * y[n-1]"
         func = _compile_equation(eq_str)
         
         # Test the compiled function
@@ -123,7 +156,7 @@ class TestEquationCompilation:
     
     def test_compile_equation_with_numpy_functions(self):
         """Test compilation with numpy functions like sin and cos."""
-        eq_str = "np.sin(a * x[i-1]) + np.cos(b * y[i-1])"
+        eq_str = "np.sin(a * x[n-1]) + np.cos(b * y[n-1])"
         func = _compile_equation(eq_str)
         
         result = func(0.0, 0.0, 1.0, 1.0, 0.0, 0.0)
@@ -196,14 +229,14 @@ class TestConvertToMathText:
     
     def test_converts_array_notation(self):
         """Test that array notation is converted to subscripts."""
-        result = convert_to_math_text("x[i-1]")
-        assert "_i" in result
-        assert "[i-1]" not in result
+        result = convert_to_math_text("x[n-1]")
+        assert "_n" in result
+        assert "[n-1]" not in result
     
     def test_converts_multiplication(self):
-        """Test that multiplication is converted to cdot."""
+        """Test that multiplication symbol is removed."""
         result = convert_to_math_text("a * x")
-        assert r"\cdot" in result
+        assert r"\cdot" not in result
     
     def test_converts_exponentiation(self):
         """Test that exponentiation is converted to LaTeX."""

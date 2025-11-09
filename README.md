@@ -21,7 +21,7 @@ A Python framework for discovering and visualizing 4-parameter chaotic dynamical
 |-----------|-------------|---------------|-------|
 | **Tinkerbell** | $x_{n+1}=x_n^2-y_n^2+ax_n + by_n$<br>$y_{n+1}=2x_ny_n+cx_n+dy_n$ | $a=0.9$, $b=-0.6013$, $c=2.0$, $d=0.5$ | $x_0=-0.72$, $y_0=-0.64$ |
 | **Custom2**    | $x_{n+1}=a(e^{\cos{x_n}}-\frac{\pi}{2})+b(e^{\sin{y_n}}-\frac{\pi}{2})$<br>$x_{n+1}=c(e^{\cos{x_n}}-\frac{\pi}{2})+d(e^{\sin{y_n}}-\frac{\pi}{2})$ | $a=0.73$, $b=-2.6$, $c=2.31$, $d=1.65$ | $x_0=0$, $y_0=0$ |
-| **Custom3**    | $x_{n+1}=ae^{\operatorname{arcsinh}(x_n)}-be^{\sin(y_n)}$<br>$y_{n+1}=ce^{\operatorname{arcsinh}(y_n)}-de^{\sin(x_n)}$ | $a=-2.17$, $b=-2.7$, $c=-2.08$, $d=-2.83$ | $x_0=0$, $y_0=0$ |
+| **Custom3**    | $x_{n+1}=ae^{\mathrm{arcsinh}(x_n)}-be^{\sin(y_n)}$<br>$y_{n+1}=ce^{\mathrm{arcsinh}(y_n)}-de^{\sin(x_n)}$ | $a=-2.17$, $b=-2.7$, $c=-2.08$, $d=-2.83$ | $x_0=0$, $y_0=0$ |
 
 ---
 
@@ -72,8 +72,6 @@ Create specific attractors from known parameters with high-quality visualization
 Discover novel attractors through automated exploration of parameter space.
 
 **Algorithm:**
-1. **Sampling**: Draw parameters uniformly from discrete grid (configurable precision, e.g., 0.01 → ~13 billion combinations per equation)
-
 1. **Sampling**: Draw parameters uniformly from discrete grid (e.g., range [-3, 3] with 0.01 precision $\rightarrow$ 601 values per parameter $\rightarrow$ $601^4$ $\approx$ 130 billion total combinations)
 2. **Quick evaluation**: Generate 25K test points for rapid filtering
 3. **Multi-stage filtering**:
@@ -97,7 +95,7 @@ $$\text{score} = \left(\frac{r_{\text{aspect}} - r_{\text{ideal,aspect}}}{\max(|
 - $r_{\text{unique}}$ = fraction of unique points at 2 decimal precision
 - $r_{\text{ideal,aspect}} = 1.5$ (slightly rectangular for visual balance)
 - $r_{\text{ideal,unique}} \approx 0.67$ (balanced structure and complexity)
-- Acceptable ranges: aspect $\in [1.0, 4.0]$, unique $\in [0.1, 1.0]$
+- Acceptable ranges: aspect $\in [1.0, 4.0]$, unique $\in [0.02, 0.98]$
 
 **Interpretation:**
 - **Score = 0**: Perfect match to ideal characteristics

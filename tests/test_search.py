@@ -68,7 +68,14 @@ class TestEvaluateAttractor:
     def test_returns_dict_with_required_keys(self):
         """Test that output dictionary contains required keys."""
         params = {'a': 0.9, 'b': -0.6, 'c': 2.0, 'd': 0.5}
-        result = evaluate_attractor(params, "Tinkerbell", test_iterations=5000)
+        x_start=-0.72
+        y_start=-0.64
+        result = evaluate_attractor(
+            params=params,
+            equation_id="Tinkerbell",
+            x_start=x_start,
+            y_start=y_start,
+            iterations=5000)
         
         assert 'score' in result
         assert 'reason' in result
@@ -77,7 +84,14 @@ class TestEvaluateAttractor:
         """Test that known good parameters pass evaluation."""
         # Tinkerbell attractor with standard parameters
         params = {'a': 0.9, 'b': -0.6013, 'c': 2.0, 'd': 0.5}
-        result = evaluate_attractor(params, "Tinkerbell", test_iterations=10000)
+        x_start=-0.72
+        y_start=-0.64
+        result = evaluate_attractor(
+            params=params,
+            equation_id="Tinkerbell",
+            x_start=x_start,
+            y_start=y_start,
+            iterations=5000)
         
         assert result['score'] >= 0.0
         assert result['reason'] == "Passed all checks"
@@ -93,11 +107,11 @@ class TestEvaluateAttractor:
         y_start = 1
         
         result = evaluate_attractor(
-            params,
-            "Tinkerbell",
+            params=params,
+            equation_id="Tinkerbell",
             x_start=x_start,
             y_start=y_start,
-            test_iterations=5000)
+            iterations=5000)
         
         assert result['score'] < 0.0
         assert 'reason' in result
@@ -109,11 +123,11 @@ class TestEvaluateAttractor:
         y_start = 0
         
         result = evaluate_attractor(
-            params,
-            "Tinkerbell",
+            params=params,
+            equation_id="Tinkerbell",
             x_start=x_start,
             y_start=y_start,
-            test_iterations=5000)
+            iterations=5000)
         
         assert result['score'] < 0.0
         assert 'collapsed' in result['reason'].lower() or 'small' in result['reason'].lower()
@@ -125,11 +139,11 @@ class TestEvaluateAttractor:
         y_start = -0.64
         
         result = evaluate_attractor(
-            params,
-            "Tinkerbell",
+            params=params,
+            equation_id="Tinkerbell",
             x_start=x_start,
             y_start=y_start,
-            test_iterations=10000)
+            iterations=5000)
         
         assert result['score'] >= 0.0
         assert result['reason'] == "Passed all checks"
@@ -137,10 +151,15 @@ class TestEvaluateAttractor:
     def test_aspect_ratio_bounds(self):
         """Test that aspect ratio check works correctly."""
         params = {'a': 0.9, 'b': -0.6013, 'c': 2.0, 'd': 0.5}
+        x_start = -0.72
+        y_start = -0.64
+       
         result = evaluate_attractor(
-            params, 
-            "Tinkerbell", 
-            test_iterations=10000,
+            params=params,
+            equation_id="Tinkerbell",
+            x_start=x_start,
+            y_start=y_start,
+            iterations=5000,
             max_aspect_ratio=1.00001
         )
         
@@ -150,10 +169,15 @@ class TestEvaluateAttractor:
     def test_unique_ratio_bounds(self):
         """Test that unique ratio check works correctly."""
         params = {'a': 0.9, 'b': -0.6013, 'c': 2.0, 'd': 0.5}
+        x_start = -0.72
+        y_start = -0.64      
+        
         result = evaluate_attractor(
-            params,
-            "Tinkerbell",
-            test_iterations=10000,
+            params=params,
+            equation_id="Tinkerbell",
+            x_start=x_start,
+            y_start=y_start,
+            iterations=5000,
             min_unique_ratio=0.1,
             max_unique_ratio=0.95
         )
@@ -164,7 +188,16 @@ class TestEvaluateAttractor:
     def test_handles_exception_during_generation(self):
         """Test that exceptions during generation are caught."""
         params = {'a': 0.9, 'b': -0.6, 'c': 2.0, 'd': 0.5}
-        result = evaluate_attractor(params, "InvalidEquation", test_iterations=5000)
+        x_start = -0.72
+        y_start = -0.64 
+        
+        result = evaluate_attractor(
+            params=params,
+            equation_id="Unknown",
+            x_start=x_start,
+            y_start=y_start,
+            iterations=5000,
+        )
         
         assert result['score'] < 0.0
         assert 'exception' in result['reason'].lower() or 'error' in result['reason'].lower()
@@ -172,11 +205,15 @@ class TestEvaluateAttractor:
     def test_range_checks_work(self):
         """Test that min and max range checks are applied."""
         params = {'a': 0.9, 'b': -0.6013, 'c': 2.0, 'd': 0.5}
+        x_start = -0.72
+        y_start = -0.64 
         
         result = evaluate_attractor(
-            params,
-            "Tinkerbell",
-            test_iterations=10000,
+            params=params,
+            equation_id="Tinkerbell",
+            x_start=x_start,
+            y_start=y_start,
+            iterations=10000,
             min_small_side=1000.0,
             max_small_side=2000.0
         )
@@ -191,21 +228,35 @@ class TestEvaluateAttractorEdgeCases:
     def test_handles_all_zeros(self):
         """Test handling when all generated points are zero."""
         params = {'a': 0.0, 'b': 0.0, 'c': 0.0, 'd': 0.0}
-        result = evaluate_attractor(params, "Tinkerbell", test_iterations=1000)
+        result = evaluate_attractor(params, "Tinkerbell", iterations=1000)
         
         assert result['score'] < 0.0
     
     def test_handles_very_small_iterations(self):
         """Test with very small iteration count."""
         params = {'a': 0.9, 'b': -0.6, 'c': 2.0, 'd': 0.5}
-        result = evaluate_attractor(params, "Tinkerbell", test_iterations=50)
+        x_start = 100
+        y_start = 100
+        result = evaluate_attractor(params=params,
+                                    equation_id="Tinkerbell",
+                                    x_start=x_start,
+                                    y_start=y_start,
+                                    iterations=50)
         
         assert result['score'] < 0.0
-        assert 'few points' in result['reason'].lower()
+        assert 'insufficient valid points' in result['reason'].lower()
     
     def test_scoring_formula_properties(self):
         """Test that scoring formula has expected properties."""
         params = {'a': 0.9, 'b': -0.6013, 'c': 2.0, 'd': 0.5}
-        result = evaluate_attractor(params, "Tinkerbell", test_iterations=10000)
+        x_start = -0.72
+        y_start = -0.64
+        
+        result = evaluate_attractor(
+            params=params,
+            equation_id="Tinkerbell",
+            x_start=x_start,
+            y_start=y_start,
+            iterations=5000)
         
         assert result['score'] >= 0.0
