@@ -7,35 +7,33 @@ This module provides:
 - search_attractors: random search over parameter space with filtering and saving
 """
 
+import csv
 import os
 import time
-import csv
-from typing import Dict, Tuple, List, Any
+from typing import Any, Dict, Tuple
 
 import numpy as np
 from scipy.stats import gaussian_kde
 
-
 from .core import (
     COLOR_METHOD,
-    VIRIDIS_PALETTE,
-    GRADIENT_LOW,
     GRADIENT_HIGH,
+    GRADIENT_LOW,
+    VIRIDIS_PALETTE,
+    evaluate_attractor,
     generate_chaotic,
     save_attractor,
-    evaluate_attractor
 )
-from .equations import EQUATION_LIBRARY
 
 
 def generate_random(min_val: float, max_val: float, decimals: int) -> float:
     """
     Generate a random value with fixed decimal precision.
-    
+
     Samples uniformly from the discrete set of values between min_val and max_val
     that can be represented with the specified number of decimal places.
-    
-        
+
+
     Returns:
         Random value rounded to specified decimal places
     """
@@ -73,15 +71,15 @@ def search_attractors(
     max_unique_ratio: float = 0.95,
     max_aspect_ratio: float = 4.0,
     include_info: bool = True,
-    save_format: str = 'png',
+    save_format: str = "png",
 ) -> Dict[str, Any]:
     """
     Perform random search over parameter space to find interesting attractors.
-    
+
     Randomly samples parameter combinations, evaluates them with quick tests,
     then generates and saves full-resolution visualizations of those that pass.
     Creates both individual files and a summary CSV.
-    
+
     Returns:
         Dictionary containing:
             - attractors: List[Dict] with parameters, stats, and filenames
@@ -103,7 +101,7 @@ def search_attractors(
     # Set prefix to equation_id if not provided
     if prefix is None:
         prefix = equation_id
-        
+
     found_attractors = []
     attempts = 0
 
@@ -113,7 +111,7 @@ def search_attractors(
     try:
         while len(found_attractors) < num_to_find and attempts < max_attempts:
             attempts += 1
-    
+
             # Sample parameters with limited decimals
             params = {
                 "a": generate_random(
@@ -129,9 +127,9 @@ def search_attractors(
                     parameter_ranges["d"][0], parameter_ranges["d"][1], decimals
                 ),
             }
-            
+
             attractor_num = len(found_attractors) + start_counter
-    
+
             evaluation = evaluate_attractor(
                 params=params,
                 x_start=x_start,
@@ -139,7 +137,7 @@ def search_attractors(
                 equation_id=equation_id,
                 iterations=test_iterations,
             )
-            
+
             if attempts % progress_interval == 0:
                 elapsed_sec = time.time() - start_time
                 rate = elapsed_sec / attempts if attempts > 0 else 0.0
@@ -150,11 +148,11 @@ def search_attractors(
                     end="",
                     flush=True,
                 )
-    
+
             # Skip if evaluation failed
             if evaluation["score"] < 0:
                 continue
-        
+
             # Passed quick checks
             print("\n\nInitial tests passed")
             print(
@@ -163,7 +161,7 @@ def search_attractors(
                 f"c={params['c']}, d={params['d']}"
             )
             print(f"Generating full attractor with {final_iterations:,} iterations")
-            
+
             try:
                 data = prepare_search_data(
                     params=params,
@@ -175,7 +173,7 @@ def search_attractors(
             except Exception as e:
                 print(f"Skipped attractor {attractor_num} due to data prep error: {e}")
                 continue
-    
+
             evaluation = evaluate_attractor(
                 params=params,
                 equation_id=equation_id,
@@ -188,12 +186,12 @@ def search_attractors(
                 max_unique_ratio=max_unique_ratio,
                 max_aspect_ratio=max_aspect_ratio,
             )
-            
+
             # Skip if evaluation failed
             if evaluation["score"] < 0:
                 print(f"Attractor validation failed: {evaluation['reason']}")
                 continue
-            
+
             # Passed final checks
             print("\nFinal tests passed")
             print(
@@ -203,7 +201,7 @@ def search_attractors(
                 f"Aspect ratio: {evaluation['aspect_ratio']:.2f} | "
                 f"Unique ratio: {evaluation['unique_ratio']:.3f}"
             )
-                    
+
             # Save attractor image
             saved_files = save_attractor(
                 data=data,
@@ -219,7 +217,7 @@ def search_attractors(
                 low=GRADIENT_LOW,
                 high=GRADIENT_HIGH,
             )
-    
+
             found_attractors.append(
                 {
                     "parameters": params,
@@ -227,10 +225,10 @@ def search_attractors(
                     "files": saved_files,
                 }
             )
-    
+
     except KeyboardInterrupt:
         print("\nInterrupted by user")
-    
+
     finally:
         elapsed_minutes = (time.time() - start_time) / 60.0
         print(
@@ -238,7 +236,7 @@ def search_attractors(
             f"({elapsed_minutes:.2f} minutes)"
         )
         print(f"Found {len(found_attractors)} attractors")
-    
+
         # Build summary table
         summary_rows = []
         for index, attr in enumerate(found_attractors, start=start_counter):
@@ -256,7 +254,7 @@ def search_attractors(
                 "unique_ratio": eval_["unique_ratio"],
             }
             summary_rows.append(row)
-    
+
         # Write CSV summary
         if summary_rows:
             csv_path = os.path.join(output_dir, f"{prefix}_summary.csv")
@@ -280,13 +278,15 @@ def search_attractors(
             print(f"Saved parameter summary to: {csv_path}")
         else:
             print("No attractors found that met the criteria.")
-    
-        return {
+
+        result = {
             "attractors": found_attractors,
             "summary": summary_rows,
             "attempts": attempts,
             "elapsed_minutes": elapsed_minutes,
         }
+
+    return result
 
 
 def prepare_search_data(
@@ -299,31 +299,32 @@ def prepare_search_data(
 ) -> Dict[str, Any]:
     """
     Generate attractor points and compute density using KDE for visualization.
-    
+
     Returns dict with keys: 'x', 'y', 'density' (normalized 0-1), 'params'.
     Raises ValueError if fewer than 10,000 valid points are generated.
     """
-    
+
     # Generate points
     x, y = generate_chaotic(
         params=params,
         equation_id=equation_id,
         iterations=final_iterations,
         x_start=x_start,
-        y_start=y_start)
+        y_start=y_start,
+    )
 
     # Remove any NaN or Inf values
     valid_mask = np.isfinite(x) & np.isfinite(y)
     x = x[valid_mask]
     y = y[valid_mask]
-    
+
     # Validate sufficient data
     if len(x) < 10_000:
         raise ValueError(
             f"Insufficient valid points for plotting an attractor:\n"
             f"Generated {len(x)}, need at least 10,000."
         )
-    
+
     # Compute density using KDE
     try:
         # Sample for KDE efficiency
@@ -331,31 +332,33 @@ def prepare_search_data(
         indices = np.random.choice(len(x), sample_size, replace=False)
         x_sample = x[indices]
         y_sample = y[indices]
-        
+
         # Calculate KDE
         kde = gaussian_kde(np.vstack([x_sample, y_sample]))
         density = kde(np.vstack([x, y]))
-        
+
         print(f"Initial Density Range: {density.min():.4f} to {density.max():.4f}")
-        
+
         # Normalize density to [0, 1]
         density_range = density.max() - density.min()
         if density_range != 0:
             density = (density - density.min()) / density_range
-            print(f"Normalized Density Range: {density.min():.2f} to {density.max():.2f}")
+            print(
+                f"Normalized Density Range: {density.min():.2f} to {density.max():.2f}"
+            )
         else:
             density = np.ones(len(x), np.float64)
             print("Warning: Density is a constant--normalized to 1")
-        
+
     except Exception as e:
         print(f"Warning: Could not compute KDE density: {e}")
         print("Falling back to uniform density")
         density = np.ones(len(x), np.float64)
-    
+
     return {
-        'x': x,
-        'y': y,
-        'density': density,
-        'params': params,
-        'equation_id': equation_id
+        "x": x,
+        "y": y,
+        "density": density,
+        "params": params,
+        "equation_id": equation_id,
     }
