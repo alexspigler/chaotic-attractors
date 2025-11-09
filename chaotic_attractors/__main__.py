@@ -8,23 +8,15 @@ Modes:
 
 import argparse
 import sys
-from typing import Dict
 
-from .equations import EQUATION_LIBRARY
 from .core import (
-    COLOR_METHOD,
-    VIRIDIS_PALETTE,
-    GRADIENT_LOW,
-    GRADIENT_HIGH,
     prepare_generate_data,
     save_attractor,
 )
-
+from .equations import EQUATION_LIBRARY
 from .search import (
     search_attractors,
-    prepare_search_data,
 )
-
 
 # Default parameters for "generate" mode
 DEFAULT_EQUATION = "Tinkerbell"
@@ -34,13 +26,13 @@ DEFAULT_PARAMS = {
     "c": 2.0,
     "d": 0.5,
 }
-DEFAULT_TEST_ITERATIONS=25_000
+DEFAULT_TEST_ITERATIONS = 25_000
 DEFAULT_FINAL_ITERATIONS = 2_000_000
 DEFAULT_X_START = 0.0
 DEFAULT_Y_START = 0.0
 
-DEFAULT_FORMAT = 'png'
-DEFAULT_OUTPUT_DIR = 'output'
+DEFAULT_FORMAT = "png"
+DEFAULT_OUTPUT_DIR = "output"
 DEFAULT_INCLUDE_INFO = True
 
 # Default parameter range for "search" mode
@@ -53,11 +45,10 @@ DEFAULT_TEST_ITERATIONS = 10_000
 DEFAULT_FINAL_ITERATIONS = 2_000_000
 
 
-
 def build_parser() -> argparse.ArgumentParser:
     """
     Create argument parser for command-line interface.
-    
+
     Returns:
         Configured ArgumentParser with all CLI options
     """
@@ -79,7 +70,6 @@ def build_parser() -> argparse.ArgumentParser:
             --format png \
             --output-dir output \
             --info-panel
-    
         # Search Mode
         python -m chaotic_attractors \
             --mode search \
@@ -118,80 +108,85 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--c", type=float, help="Parameter c for generate mode")
     parser.add_argument("--d", type=float, help="Parameter d for generate mode")
 
-    parser.add_argument("--test-iter", type=int, help="Number of iterations for initial tests")
+    parser.add_argument(
+        "--test-iter", type=int, help="Number of iterations for initial tests"
+    )
     parser.add_argument("--final-iter", type=int, help="Number of final iterations")
-    
+
     parser.add_argument("--x-start", type=float, help="Starting x-value")
     parser.add_argument("--y-start", type=float, help="Starting y-value")
-    
+
     parser.add_argument(
         "--format",
         choices=["all", "pdf", "png", "svg"],
         default="png",
-        help="Choose which format you'd like to save as"
+        help="Choose which format you'd like to save as",
     )
-    
+
     parser.add_argument(
         "--info-panel",
         action="store_true",
-        help="If you want equation and parameter info at bottom of attractor")
-    
+        help="If you want equation and parameter info at bottom of attractor",
+    )
+
     parser.add_argument(
         "--range-min",
         type=float,
         default=DEFAULT_RANGE_MIN,
         help=f"Lower bound for a,b,c,d in search mode (default: {DEFAULT_RANGE_MIN})",
     )
-    
+
     parser.add_argument(
         "--range-max",
         type=float,
         default=DEFAULT_RANGE_MAX,
         help=f"Upper bound for a,b,c,d in search mode (default: {DEFAULT_RANGE_MAX})",
     )
-    
+
     parser.add_argument(
         "--decimals",
         type=int,
         default=DEFAULT_DECIMALS,
         help=f"Number of decimal places for parameter sampling in search mode "
-             f"(default: {DEFAULT_DECIMALS})",
+        f"(default: {DEFAULT_DECIMALS})",
     )
 
     parser.add_argument(
         "--num-to-find",
         type=int,
         default=DEFAULT_NUMBER,
-        help="Number of attractors to find before stopping search")
-    
+        help="Number of attractors to find before stopping search",
+    )
+
     parser.add_argument(
         "--max-attempts",
         type=int,
         default=DEFAULT_MAX_ATTEMPTS,
-        help="Number of attempts at which search will stop, even if desired number of attractors not found")
-    
+        help="Number of attempts at which search will stop, even if desired number of attractors not found",
+    )
+
     parser.add_argument(
         "--output-dir",
         type=str,
         default=DEFAULT_OUTPUT_DIR,
-        help="Output folder for all found attractors when in search mode")
+        help="Output folder for all found attractors when in search mode",
+    )
 
     return parser
 
 
 def main() -> None:
-    """    
+    """
     Entry point for the command-line interface.
     """
     parser = build_parser()
     args = parser.parse_args()
 
-    
     try:
         if args.mode == "generate":
             # Start from defaults and override if flags are provided
             equation_id = args.equation or DEFAULT_EQUATION
-            
+
             params = DEFAULT_PARAMS
             if args.a is not None:
                 params["a"] = args.a
@@ -201,16 +196,16 @@ def main() -> None:
                 params["c"] = args.c
             if args.d is not None:
                 params["d"] = args.d
-                
+
             test_iterations = args.test_iter or DEFAULT_TEST_ITERATIONS
             final_iterations = args.final_iter or DEFAULT_FINAL_ITERATIONS
-            
+
             x_start = args.x_start or DEFAULT_X_START
             y_start = args.y_start or DEFAULT_Y_START
-            
+
             save_format = args.format or DEFAULT_FORMAT
             output_dir = args.output_dir or DEFAULT_OUTPUT_DIR
-            
+
             data = prepare_generate_data(
                 params=params,
                 equation_id=equation_id,
@@ -219,7 +214,7 @@ def main() -> None:
                 x_start=x_start,
                 y_start=y_start,
             )
-                                    
+
             save_attractor(
                 data=data,
                 x_start=x_start,
@@ -232,7 +227,7 @@ def main() -> None:
         elif args.mode == "search":
             # Start from defaults and override if flags are provided
             equation_id = args.equation or DEFAULT_EQUATION
-            
+
             num_to_find = args.num_to_find or DEFAULT_NUMBER
             max_attempts = args.max_attempts or DEFAULT_MAX_ATTEMPTS
             decimals = args.decimals or DEFAULT_DECIMALS
@@ -246,8 +241,8 @@ def main() -> None:
             y_start = args.y_start or DEFAULT_Y_START
             test_iterations = args.test_iter or DEFAULT_TEST_ITERATIONS
             final_iterations = args.final_iter or DEFAULT_FINAL_ITERATIONS
-            save_format = args.format or DEFAULT_FORMAT   
-            
+            save_format = args.format or DEFAULT_FORMAT
+
             search_attractors(
                 equation_id=equation_id,
                 num_to_find=num_to_find,
@@ -265,6 +260,7 @@ def main() -> None:
     except KeyboardInterrupt:
         print("\nInterrupted by user. Exiting.")
         sys.exit(130)
+
 
 if __name__ == "__main__":
     main()
