@@ -7,9 +7,6 @@ Provides tools to search for, generate, evaluate, and visualize 4-parameter chao
 from .equations import EQUATION_LIBRARY
 
 from .core import (
-    ITERATIONS_DEFAULT,
-    X_START,
-    Y_START,
     ALPHA_DEFAULT,
     POINT_SIZE_DEFAULT,
     COLOR_METHOD,
@@ -25,7 +22,7 @@ from .core import (
     _compile_equation,
     _get_equation_functions,
     generate_chaotic,
-    prepare_attractor_data,
+    prepare_generate_data,
     create_colormap,
     plot_chaotic,
     save_attractor,
@@ -37,4 +34,5 @@ from .search import (
     generate_random,
     evaluate_attractor,
     search_attractors,
+    prepare_search_data
 )

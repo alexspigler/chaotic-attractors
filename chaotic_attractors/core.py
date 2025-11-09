@@ -26,17 +26,12 @@ from .equations import EQUATION_LIBRARY
 # Configuration Parameters
 # ===================================================
 
-# Iteration settings
-ITERATIONS_DEFAULT: int = 2_000_000
-X_START: float = -0.72
-Y_START: float = -0.64
-
 # Visualization settings
 ALPHA_DEFAULT: float = 0.3  # 0.0 - 1.0 (fully opaque)
 POINT_SIZE_DEFAULT: float = 0.15
 
 # Color configuration
-COLOR_METHOD: str = "gradient"  # Options: "viridis", "gradient", "gradient3", "gradientn"
+COLOR_METHOD: str = "gradientn"  # Options: "viridis", "gradient", "gradient3", "gradientn"
 
 # Viridis palettes
 VIRIDIS_PALETTE: str = "plasma"
@@ -70,8 +65,8 @@ def _compile_equation(
     Returns a function that takes (x_prev, y_prev, a, b, c, d) and computes the next value.
     """
     # Replace array notation with previous-value names
-    eq_str = eq_str.replace('x[i-1]', 'x_prev')
-    eq_str = eq_str.replace('y[i-1]', 'y_prev')
+    eq_str = eq_str.replace('x[n-1]', 'x_prev')
+    eq_str = eq_str.replace('y[n-1]', 'y_prev')
     
     func_str = f"lambda x_prev, y_prev, a, b, c, d: {eq_str}"
     namespace = {'np': np, '__builtins__': {}}
@@ -103,17 +98,13 @@ def _get_equation_functions(equation_id: str) -> Tuple[Callable, Callable]:
 
 def generate_chaotic(
     params: Dict[str, float], 
-    equation_id: str, 
-    n_iterations: int = ITERATIONS_DEFAULT,
-    x_start: float = X_START,
-    y_start: float = Y_START
+    equation_id: str,
+    x_start: float,
+    y_start: float,
+    iterations: int = None,
 ) -> Tuple[npt.NDArray[np.float64], npt.NDArray[np.float64]]:
     """
     Generate trajectory points for a chaotic attractor using iterative equations.
-    
-    Example:
-        >>> params = {'a': 0.9, 'b': -0.6, 'c': 2.0, 'd': 0.5}
-        >>> x, y = generate_chaotic(params, "Tinkerbell", n_iterations=10000)
     """
     # Validate parameters
     required_params = {'a', 'b', 'c', 'd'}
@@ -124,12 +115,8 @@ def generate_chaotic(
     a, b, c, d = params['a'], params['b'], params['c'], params['d']
     
     # Pre-allocate arrays
-    x = np.zeros(n_iterations, np.float64)
-    y = np.zeros(n_iterations, np.float64)
-    
-    print(f"Generating attractor: {equation_id}")
-    print(f"Parameters: a={params['a']}, b={params['b']}, c={params['c']}, d={params['d']}")
-    print(f"Iterations: {n_iterations:,}")
+    x = np.zeros(iterations, np.float64)
+    y = np.zeros(iterations, np.float64)
     
     # Set initial conditions
     x[0] = x_start
@@ -139,19 +126,19 @@ def generate_chaotic(
     x_func, y_func = _get_equation_functions(equation_id)
     
     # Iterate through the dynamical system
-    valid_length = n_iterations
-    for i in range(1, n_iterations):
+    valid_length = iterations
+    for n in range(1, iterations):
         try:
-            x[i] = x_func(x[i-1], y[i-1], a, b, c, d)
-            y[i] = y_func(x[i-1], y[i-1], a, b, c, d)
+            x[n] = x_func(x[n-1], y[n-1], a, b, c, d)
+            y[n] = y_func(x[n-1], y[n-1], a, b, c, d)
             
             # Early termination if values become non-finite
-            if not (np.isfinite(x[i]) and np.isfinite(y[i])):
-                valid_length = i
+            if not (np.isfinite(x[n]) and np.isfinite(y[n])):
+                valid_length = n
                 break
                 
         except (FloatingPointError, OverflowError):
-            valid_length = i
+            valid_length = n
             break
         
     x = x[:valid_length]
@@ -160,11 +147,154 @@ def generate_chaotic(
     return x, y
 
 
-def prepare_attractor_data(
-    params: Dict[str, float], 
-    equation_id: str, 
-    n_iterations: int = ITERATIONS_DEFAULT,
-    kde_sample_size: int = 50_000
+def evaluate_attractor(
+    params: Dict[str, float],
+    equation_id: str,
+    x: np.ndarray = None,
+    y: np.ndarray = None,
+    x_start: float = None,
+    y_start: float = None,
+    min_small_side: float = 0.25,
+    max_small_side: float = 500.0,
+    digits_unique: int = 2,
+    min_unique_ratio: float = 0.1,
+    max_unique_ratio: float = 1,
+    max_aspect_ratio: float = 4.0,
+    iterations: int = None,
+) -> Dict[str, Any]:
+    """
+    Evaluate parameter set quality using geometric and statistical checks.
+    
+    Filters out uninteresting parameter sets. Checks for divergence, collapse to
+    periodic orbits, and poor aspect ratios.
+        
+    Returns:
+        Dictionary containing:
+            - score: float >= 0 if passed (lower is better), -1 if rejected
+            - reason: str explaining rejection or 'Passed all checks'
+            - x_range: float (if passed)
+            - y_range: float (if passed)
+            - unique_ratio: float (if passed)
+            - aspect_ratio: float (if passed)
+    """
+    # If data not provided, generate it
+    if x is None or y is None:
+        if params is None or equation_id is None:
+            raise ValueError("Must provide either (x, y) or (params, equation_id)")
+        
+        try:
+            x, y = generate_chaotic(
+                params=params,
+                equation_id=equation_id,
+                iterations=iterations,
+                x_start=x_start,
+                y_start=y_start)
+            
+        except Exception as e:
+            return {
+                "score": -1.0,
+                "reason": f"Exception during generation: {e}",
+            }
+
+    x = np.asarray(x)
+    y = np.asarray(y)
+
+    # Remove non-finite values
+    finite_mask = np.isfinite(x) & np.isfinite(y)
+    x = x[finite_mask]
+    y = y[finite_mask]
+
+    if x.size < 100 or y.size < 100:
+        return {
+            "score": -1.0,
+            "reason": "Too few points generated",
+        }
+
+    x_diff = np.max(x) - np.min(x)
+    y_diff = np.max(y) - np.min(y)
+
+    # Range checks
+    if x_diff < min_small_side or y_diff < min_small_side:
+        return {
+            "score": -1.0,
+            "reason": "Range too small - likely collapsed to a point or line",
+        }
+    
+    if x_diff > max_small_side or y_diff > max_small_side:
+        return {
+            "score": -1.0,
+            "reason": "Range too large, likely diverges",
+        }
+
+    # Unique ratio
+    rounded_points = np.column_stack(
+        [np.round(x, digits_unique), np.round(y, digits_unique)]
+    )
+    unique_points = np.unique(rounded_points, axis=0)
+    unique_ratio = unique_points.shape[0] / rounded_points.shape[0]
+
+    if unique_ratio < min_unique_ratio:
+        return {
+            "score": -1.0,
+            "reason": "Low unique point ratio - likely a periodic orbit",
+        }
+
+    if unique_ratio > max_unique_ratio:
+        return {
+            "score": -1.0,
+            "reason": "High unique point ratio - too spread out / not interesting",
+        }
+
+    aspect_ratio = x_diff / y_diff
+    max_aspect_component = max(aspect_ratio, 1.0 / aspect_ratio)
+
+    if max_aspect_component > max_aspect_ratio:
+        return {
+            "score": -1.0,
+            "reason": "Bad aspect ratio",
+        }
+    
+    # Scoring (0 is best)
+    # Measures normalized squared deviations from ideal characteristics
+    ideal_aspect_ratio = 3/2    # Prefer slightly rectangular attractors
+    ideal_unique_ratio = 2/3    # Balance between structure and complexity
+    min_aspect_ratio = 1.0
+
+    # Calculate maximum possible deviation in either direction from ideal
+    # This ensures symmetric penalization regardless of which side of ideal
+    max_aspect_deviation = max(
+        abs(min_aspect_ratio - ideal_aspect_ratio),
+        abs(max_aspect_ratio - ideal_aspect_ratio))
+    
+    max_unique_deviation = max(
+        abs(min_unique_ratio - ideal_unique_ratio),
+        abs(max_unique_ratio - ideal_unique_ratio))
+    
+    # Normalize deviations to [0, 1] scale (after squaring)
+    aspect_normalized = (max_aspect_component - ideal_aspect_ratio) / max_aspect_deviation
+    unique_normalized = (unique_ratio - ideal_unique_ratio) / max_unique_deviation
+    
+    # Range: [0, 2] where 0 = both metrics at ideal, 2 = both at worst extremes (that would pass filtering)
+    score_final = aspect_normalized**2 + unique_normalized**2
+
+    return {
+        "score": score_final,
+        "reason": "Passed all checks",
+        "x_range": x_diff,
+        "y_range": y_diff,
+        "unique_ratio": unique_ratio,
+        "aspect_ratio": aspect_ratio,
+    }
+
+
+def prepare_generate_data(
+    params: Dict[str, float],
+    x_start: float,
+    y_start: float,
+    equation_id: str,
+    test_iterations: int = 25_000,
+    final_iterations: int = 2_000_000,
+    kde_sample_size: int = 50_000,
 ) -> Dict[str, Any]:
     """
     Generate attractor points and compute density using KDE for visualization.
@@ -172,59 +302,89 @@ def prepare_attractor_data(
     Returns dict with keys: 'x', 'y', 'density' (normalized 0-1), 'params'.
     Raises ValueError if fewer than 10,000 valid points are generated.
     """
-    # Generate points
-    x, y = generate_chaotic(params, equation_id, n_iterations)
     
-    print(f"Generated {len(x):,} valid points")
-    print(f"X range: [{x.min():.3f}, {x.max():.3f}]")
-    print(f"Y range: [{y.min():.3f}, {y.max():.3f}]")
-
-    # Remove any NaN or Inf values
-    valid_mask = np.isfinite(x) & np.isfinite(y)
-    x = x[valid_mask]
-    y = y[valid_mask]
-    
-    # Validate sufficient data
-    if len(x) < 10_000:
-        raise ValueError(
-            f"Insufficient valid points for plotting an attractor:\n"
-            f"Generated {len(x)}, need at least 10,000."
-        )
-    
-    # Compute density using KDE
     try:
-        # Sample for KDE efficiency
-        sample_size = min(len(x), kde_sample_size)
-        indices = np.random.choice(len(x), sample_size, replace=False)
-        x_sample = x[indices]
-        y_sample = y[indices]
-        
-        # Calculate KDE
-        kde = gaussian_kde(np.vstack([x_sample, y_sample]))
-        density = kde(np.vstack([x, y]))
-        
-        print(f"Initial Density Range: {density.min():.4f} to {density.max():.4f}")
-        
-        # Normalize density to [0, 1]
-        density_range = density.max() - density.min()
-        if density_range != 0:
-            density = (density - density.min()) / density_range
-            print(f"Normalized Density Range: {density.min():.4f} to {density.max():.4f}")
-        else:
-            density = np.ones(len(x), np.float64)
-            print("Warning: Density is a constant--normalized to 1")
-        
-    except Exception as e:
-        print(f"Warning: Could not compute KDE density: {e}")
-        print("Falling back to uniform density")
-        density = np.ones(len(x), np.float64)
+        print(f"Testing parameter set with {test_iterations:,} iterations before full generation...")
     
-    return {
-        'x': x,
-        'y': y,
-        'density': density,
-        'params': params
-    }
+        evaluation = evaluate_attractor(
+            params=params,
+            x_start=x_start,
+            y_start=y_start,
+            equation_id=equation_id,
+            iterations=test_iterations,
+        )
+        
+        # Skip if evaluation failed
+        if evaluation["score"] < 0:
+            raise ValueError(f"Attractor validation failed: {evaluation['reason']}")
+            
+        # Passed quick checks; now do full iterations and save
+        print("Initial tests passed")
+        print(f"Generating full attractor with {final_iterations:,} iterations")
+    
+        
+        # Generate points
+        x, y = generate_chaotic(
+            params=params,
+            equation_id=equation_id,
+            iterations=final_iterations,
+            x_start=x_start,
+            y_start=y_start)
+        
+        print(f"Generated {len(x):,} valid points")
+        print(f"X range: [{x.min():.3f}, {x.max():.3f}]")
+        print(f"Y range: [{y.min():.3f}, {y.max():.3f}]")
+    
+        # Remove any NaN or Inf values
+        valid_mask = np.isfinite(x) & np.isfinite(y)
+        x = x[valid_mask]
+        y = y[valid_mask]
+        
+        # Validate sufficient data
+        if len(x) < 10_000:
+            raise ValueError(
+                f"Insufficient valid points for plotting an attractor:\n"
+                f"Generated {len(x)}, need at least 10,000."
+            )
+        
+        # Compute density using KDE
+        try:
+            # Sample for KDE efficiency
+            sample_size = min(len(x), kde_sample_size)
+            indices = np.random.choice(len(x), sample_size, replace=False)
+            x_sample = x[indices]
+            y_sample = y[indices]
+            
+            # Calculate KDE
+            kde = gaussian_kde(np.vstack([x_sample, y_sample]))
+            density = kde(np.vstack([x, y]))
+            
+            print(f"Initial Density Range: {density.min():.4f} to {density.max():.4f}")
+            
+            # Normalize density to [0, 1]
+            density_range = density.max() - density.min()
+            if density_range != 0:
+                density = (density - density.min()) / density_range
+                print(f"Normalized Density Range: {density.min():.2f} to {density.max():.2f}")
+            else:
+                density = np.ones(len(x), np.float64)
+                print("Warning: Density is a constant--normalized to 1")
+            
+        except Exception as e:
+            print(f"Warning: Could not compute KDE density: {e}")
+            print("Falling back to uniform density")
+            density = np.ones(len(x), np.float64)
+        
+        return {
+            'x': x,
+            'y': y,
+            'density': density,
+            'params': params,
+            'equation_id': equation_id
+        }
+    
+    except KeyboardInterrupt:
+        print("\nInterrupted by user")
 
 
 def create_colormap(
@@ -322,53 +482,72 @@ def plot_chaotic(
 
 def save_attractor(
     data: Dict[str, Any],
-    filename: str,
+    x_start: float,
+    y_start: float,
+    output_dir: str = "output",
+    prefix: str | None = None,
+    start_counter: int = 1,
     point_size: float = POINT_SIZE_DEFAULT,
     alpha: float = ALPHA_DEFAULT,
     save_format: str = 'png',
     include_info: bool = True,
-    equation_id: Optional[str] = None,
     **plot_kwargs: Any
 ) -> List[str]:
     """
     Generate and save attractor visualization to file(s).
     
-    Set save_format to 'all' for PNG, PDF, and SVG. 
-    If include_info=True, equation_id is required.
-    Returns list of saved file paths.
+    Returns:
+        List of saved file paths
     """
-    # Validate arguments
-    if include_info and equation_id is None:
-        raise ValueError("equation_id is required when include_info=True")
+    try:
     
-    # Remove extension if provided
-    base_filename = os.path.splitext(filename)[0]
-    
-    # Determine which formats to save
-    if save_format == 'all':
-        formats = ['png', 'pdf', 'svg']
-    else:
-        formats = [save_format]
-    
-    saved_files = []
-    
-    for fmt in formats:
-        output_file = f"{base_filename}.{fmt}"
+        # Get equation_id from data
+        equation_id = data.get('equation_id')
+        if include_info and equation_id is None:
+            raise ValueError("include_info=True requires equation_id in data dict")
         
-        if include_info and equation_id:
-            # Create figure with info panel
-            fig, saved_file = create_attractor_with_eq(
-                data, output_file, equation_id,
-                point_size, alpha, **plot_kwargs
-            )
+        # Set prefix to equation_id if not provided
+        if prefix is None:
+            if equation_id is None:
+                raise ValueError("Either prefix must be provided or equation_id must be in data dict")
+            prefix = equation_id
+        
+        # Create output directory if it doesn't exist
+        os.makedirs(output_dir, exist_ok=True)
+        
+        # Construct base filename
+        base_filename = f"{prefix}_{start_counter}"
+        
+        # Determine which formats to save
+        if save_format == 'all':
+            formats = ['png', 'pdf', 'svg']
         else:
-            # Standard attractor without info
-            fig, ax = plot_chaotic(
-                data, 
-                point_size=point_size, 
-                alpha=alpha, 
-                **plot_kwargs
-            )
+            formats = [save_format]
+        
+        saved_files = []
+        
+        for fmt in formats:
+            output_path = os.path.join(output_dir, f"{base_filename}.{fmt}")
+            
+            if include_info and equation_id:
+                # Create figure with info panel
+                fig = create_attractor_with_eq(
+                    data=data,
+                    equation_id=equation_id,
+                    x_start=x_start,
+                    y_start=y_start,
+                    point_size=point_size,
+                    alpha=alpha,
+                    **plot_kwargs
+                )
+            else:
+                # Standard attractor without info
+                fig, ax = plot_chaotic(
+                    data=data, 
+                    point_size=point_size, 
+                    alpha=alpha, 
+                    **plot_kwargs
+                )
             
             # Format-specific settings
             save_kwargs = {
@@ -380,23 +559,28 @@ def save_attractor(
             if fmt in ('png', 'pdf'):
                 save_kwargs['dpi'] = fig.dpi
             
-            plt.savefig(output_file, **save_kwargs)
+            plt.savefig(output_path, **save_kwargs)
             plt.close(fig)
+            
+            saved_files.append(output_path)
+            print(f"Saved: {output_path}")
+            
+            print("\nDone!")
         
-        saved_files.append(output_file)
-        print(f"Saved: {output_file}")
+        return saved_files
     
-    return saved_files
+    except KeyboardInterrupt:
+        print("\nInterrupted by user")
 
 
 def convert_to_math_text(eq_str: str) -> str:
     """Convert Python equation syntax to matplotlib math text for matplotlib rendering."""
     # Remove Python-specific syntax
     eq_str = eq_str.replace('np.', '')
-    eq_str = eq_str.replace('[i-1]', '_i')  # Array index to subscript
+    eq_str = eq_str.replace('[n-1]', '_n')  # Array index to subscript
     
     # Convert operators to LaTeX
-    eq_str = eq_str.replace(' * ', r' \cdot ')
+    eq_str = eq_str.replace(' * ', '')
     eq_str = eq_str.replace('pi', r'\pi')
     
     # Convert functions to LaTeX commands (order matters!)
@@ -427,16 +611,17 @@ def convert_to_math_text(eq_str: str) -> str:
 
 def create_attractor_with_eq(
     data: Dict[str, Any],
-    output_file: str,
     equation_id: str,
+    x_start: float,
+    y_start: float,
     point_size: float = POINT_SIZE_DEFAULT,
     alpha: float = ALPHA_DEFAULT,
     **plot_kwargs: Any
-) -> Tuple[Figure, str]:
+) -> Figure:
     """
-    Create and save attractor visualizations with equation and parameter info panel below.
+    Create attractor visualization with equation and parameter info panel below.
     
-    Returns tuple of (matplotlib Figure, output file path).
+    Returns matplotlib Figure (does not save to file).
     """
     params = data['params']
     x = data['x']
@@ -454,7 +639,6 @@ def create_attractor_with_eq(
     # Get equations for display
     x_eq_raw = EQUATION_LIBRARY[equation_id]['x_eq']
     y_eq_raw = EQUATION_LIBRARY[equation_id]['y_eq']
-
     # Convert to LaTeX math text
     x_eq_math = convert_to_math_text(x_eq_raw)
     y_eq_math = convert_to_math_text(y_eq_raw)
@@ -511,14 +695,14 @@ def create_attractor_with_eq(
     
     # Build info text
     info_lines = [
-        rf"$x_{{i+1}} = {x_eq_math}$",
-        rf"$y_{{i+1}} = {y_eq_math}$",
+        rf"$x_{{n+1}} = {x_eq_math}$",
+        rf"$y_{{n+1}} = {y_eq_math}$",
         "",  # Blank line for spacing
         f"$a = {params['a']},  b = {params['b']},  c = {params['c']},  d = {params['d']}$",
-        rf"$x_0 = {X_START},  y_0 = {Y_START}$"
+        rf"$x_0 = {x_start},  y_0 = {y_start}$"
     ]
     info_text = '\n'.join(info_lines)
-
+    
     # Add centered text to panel
     ax_text.text(
         0.5, 0.5, info_text,
@@ -528,21 +712,4 @@ def create_attractor_with_eq(
         transform=ax_text.transAxes
     )
     
-    # Save with format-specific settings
-    fmt = os.path.splitext(output_file)[1][1:]  # Get extension without dot
-    save_kwargs = {
-        'bbox_inches': 'tight',
-        'pad_inches': 0.1,
-        'facecolor': fig.get_facecolor()
-    }
-    
-    if fmt in ('png', 'pdf'):
-        save_kwargs['dpi'] = dpi
-    
-    print("\nSaving visualization(s)...")
-    plt.savefig(output_file, **save_kwargs)
-    plt.close(fig)
-    
-    print("\nDone!")
-    
-    return fig, output_file
+    return fig
