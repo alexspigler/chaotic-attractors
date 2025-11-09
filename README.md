@@ -20,7 +20,7 @@ A Python framework for discovering and visualizing 4-parameter chaotic dynamical
 | Name | Equation | Parameters | Initial Position |
 |-----------|-------------|---------------|-------|
 | **Tinkerbell** | $x_{n+1}=x_n^2-y_n^2+ax_n + by_n$<br>$y_{n+1}=2x_ny_n+cx_n+dy_n$ | $a=0.9$, $b=-0.6013$, $c=2.0$, $d=0.5$ | $x_0=-0.72$, $y_0=-0.64$ |
-| **Custom2**    | $x_{n+1}=a(e^{\cos{x_n}}-\frac{\pi}{2})+b(e^{\sin{y_n}}-\frac{\pi}{2})$<br>$x_{n+1}=c(e^{\cos{x_n}}-\frac{\pi}{2})+d(e^{\sin{y_n}}-\frac{\pi}{2})$ | $a=0.73$, $b=-2.6$, $c=2.31$, $d=1.65$ | $x_0=0$, $y_0=0$ |
+| **Custom2**    | $x_{n+1}=a(e^{\cos(x_n)}-\frac{\pi}{2})+b(e^{\sin(y_n)}-\frac{\pi}{2})$<br>$x_{n+1}=c(e^{\cos(x_n)}-\frac{\pi}{2})+d(e^{\sin(y_n)}-\frac{\pi}{2})$ | $a=0.73$, $b=-2.6$, $c=2.31$, $d=1.65$ | $x_0=0$, $y_0=0$ |
 | **Custom3**    | $x_{n+1}=ae^{\mathrm{arcsinh}(x_n)}-be^{\sin(y_n)}$<br>$y_{n+1}=ce^{\mathrm{arcsinh}(y_n)}-de^{\sin(x_n)}$ | $a=-2.17$, $b=-2.7$, $c=-2.08$, $d=-2.83$ | $x_0=0$, $y_0=0$ |
 
 ---
