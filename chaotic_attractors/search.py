@@ -57,7 +57,7 @@ def search_attractors(
     num_to_find: int = 10,
     max_attempts: int = 5_000,
     parameter_ranges: Dict[str, Tuple[float, float]] = None,
-    test_iterations: int = 25_000,
+    test_iterations: int = 50_000,
     final_iterations: int = 2_000_000,
     decimals: int = 2,
     output_dir: str = "output",

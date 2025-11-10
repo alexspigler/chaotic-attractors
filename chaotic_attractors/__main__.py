@@ -8,6 +8,7 @@ Modes:
 
 import argparse
 import sys
+import textwrap
 
 from .core import (
     prepare_generate_data,
@@ -52,41 +53,44 @@ def build_parser() -> argparse.ArgumentParser:
     Returns:
         Configured ArgumentParser with all CLI options
     """
-    parser = argparse.ArgumentParser(
-        description="4-Parameter Chaotic Attractor Visualizer",
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog=f"""
-        Available equations: {', '.join(EQUATION_LIBRARY.keys())}
+    epilog = textwrap.dedent(
+        """\
+        Examples:
+          # Generate Mode
+          chaotic_attractors \\
+              --equation Custom3 \\
+              --a -2.17 --b -2.7 --c -2.08 --d -2.83 \\
+              --x-start 0 \\
+              --y-start 0 \\
+              --test-iter 50000 \\
+              --final-iter 2000000 \\
+              --format png \\
+              --output-dir output \\
+              --info-panel
 
-    Examples:
-        # Generate Mode
-        python -m chaotic_attractors \
-            --equation Custom3 \
-            --a -2.17 --b -2.7 --c -2.08 --d -2.83 \
-            --x-start 0 \
-            --y-start 0 \
-            --test-iter 25_000 \
-            --final-iter 2000000 \
-            --format png \
-            --output-dir output \
-            --info-panel
-        # Search Mode
-        python -m chaotic_attractors \
-            --mode search \
-            --equation Custom3 \
-            --range-min -3 \
-            --range-max 3 \
-            --x-start 0.5 \
-            --y-start 0.5 \
-            --decimals 2 \
-            --num-to-find 10 \
-            --max-attempts 50000 \
-            --test-iter 10000 \
-            --final-iter 2000000 \
-            --format png \
-            --output-dir output \
-            --info-panel
-        """,
+          # Search Mode
+          chaotic_attractors \\
+              --mode search \\
+              --equation Custom3 \\
+              --range-min -3 \\
+              --range-max 3 \\
+              --x-start 0.5 \\
+              --y-start 0.5 \\
+              --decimals 2 \\
+              --num-to-find 10 \\
+              --max-attempts 50000 \\
+              --test-iter 50000 \\
+              --final-iter 2000000 \\
+              --format png \\
+              --output-dir output \\
+              --info-panel
+        """
+    )
+
+    parser = argparse.ArgumentParser(
+        description="Chaotic Attractors: Computational Exploration & Visualization",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog=epilog,
     )
 
     parser.add_argument(
@@ -103,18 +107,35 @@ def build_parser() -> argparse.ArgumentParser:
         help=f"Equation ID from the equation library (default: {DEFAULT_EQUATION})",
     )
 
-    parser.add_argument("--a", type=float, help="Parameter a for generate mode")
-    parser.add_argument("--b", type=float, help="Parameter b for generate mode")
-    parser.add_argument("--c", type=float, help="Parameter c for generate mode")
-    parser.add_argument("--d", type=float, help="Parameter d for generate mode")
+    parser.add_argument(
+        "--a", type=float, metavar="FLOAT", help="Parameter a for generate mode (float)"
+    )
+    parser.add_argument(
+        "--b", type=float, metavar="FLOAT", help="Parameter b for generate mode (float)"
+    )
+    parser.add_argument(
+        "--c", type=float, metavar="FLOAT", help="Parameter c for generate mode (float)"
+    )
+    parser.add_argument(
+        "--d", type=float, metavar="FLOAT", help="Parameter d for generate mode (float)"
+    )
 
     parser.add_argument(
-        "--test-iter", type=int, help="Number of iterations for initial tests"
+        "--test-iter",
+        type=int,
+        metavar="INT",
+        help="Number of iterations for initial tests (int)",
     )
-    parser.add_argument("--final-iter", type=int, help="Number of final iterations")
+    parser.add_argument(
+        "--final-iter", type=int, metavar="INT", help="Number of final iterations (int)"
+    )
 
-    parser.add_argument("--x-start", type=float, help="Starting x-value")
-    parser.add_argument("--y-start", type=float, help="Starting y-value")
+    parser.add_argument(
+        "--x-start", type=float, metavar="FLOAT", help="Starting x-value (float)"
+    )
+    parser.add_argument(
+        "--y-start", type=float, metavar="FLOAT", help="Starting y-value (float)"
+    )
 
     parser.add_argument(
         "--format",
@@ -132,44 +153,50 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--range-min",
         type=float,
+        metavar="FLOAT",
         default=DEFAULT_RANGE_MIN,
-        help=f"Lower bound for a,b,c,d in search mode (default: {DEFAULT_RANGE_MIN})",
+        help=f"Lower bound for a,b,c,d in search mode (float, default: {DEFAULT_RANGE_MIN})",
     )
 
     parser.add_argument(
         "--range-max",
         type=float,
+        metavar="FLOAT",
         default=DEFAULT_RANGE_MAX,
-        help=f"Upper bound for a,b,c,d in search mode (default: {DEFAULT_RANGE_MAX})",
+        help=f"Upper bound for a,b,c,d in search mode (float, default: {DEFAULT_RANGE_MAX})",
     )
 
     parser.add_argument(
         "--decimals",
         type=int,
+        metavar="INT",
         default=DEFAULT_DECIMALS,
         help=f"Number of decimal places for parameter sampling in search mode "
-        f"(default: {DEFAULT_DECIMALS})",
+        f"(int, default: {DEFAULT_DECIMALS})",
     )
 
     parser.add_argument(
         "--num-to-find",
         type=int,
+        metavar="INT",
         default=DEFAULT_NUMBER,
-        help="Number of attractors to find before stopping search",
+        help="Number of attractors to find before stopping search (int)",
     )
 
     parser.add_argument(
         "--max-attempts",
         type=int,
+        metavar="INT",
         default=DEFAULT_MAX_ATTEMPTS,
-        help="Number of attempts at which search will stop, even if desired number of attractors not found",
+        help="Number of attempts at which search will stop, even if desired number of attractors not found (int)",
     )
 
     parser.add_argument(
         "--output-dir",
         type=str,
+        metavar="PATH",
         default=DEFAULT_OUTPUT_DIR,
-        help="Output folder for all found attractors when in search mode",
+        help="Output folder for all found attractors when in search mode (path)",
     )
 
     return parser

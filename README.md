@@ -1,6 +1,6 @@
 # Chaotic Attractors: Computational Exploration & Visualization
 
-A Python framework for discovering and visualizing 4-parameter chaotic dynamical systems through algorithmic parameter space exploration and statistical quality filtering.
+A Python toolkit for discovering and visualizing 4-parameter chaotic dynamical systems through algorithmic parameter space exploration and statistical quality filtering.
 
 [![Python](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
@@ -58,7 +58,7 @@ Create specific attractors from known parameters with high-quality visualization
 
 **Features:**
 - Vectorized NumPy computation generating 2M+ iterations
-- Gaussian KDE density estimation on 50K subsamples for structure-revealing coloring
+- Gaussian KDE on 50K subsamples for structure-revealing coloring
 - NaN/Inf filtering with early termination for numerical stability
 - Multi-format export (PNG, PDF, SVG) with equation annotation panels
 - Customizable colormaps, point sizing, and transparency
@@ -73,14 +73,14 @@ Discover novel attractors through automated exploration of parameter space.
 
 **Algorithm:**
 1. **Sampling**: Draw parameters uniformly from discrete grid (e.g., range [-3, 3] with 0.01 precision $\rightarrow$ 601 values per parameter $\rightarrow$ $601^4$ $\approx$ 130 billion total combinations)
-2. **Quick evaluation**: Generate 25K test points for rapid filtering
+2. **Quick evaluation**: Generate 50K test points for rapid filtering
 3. **Multi-stage filtering**:
    - **Divergence check**: Reject if range > 500 units (divergent behavior)
    - **Collapse check**: Reject if range < 0.25 units (collapsed behavior)  
    - **Aspect ratio filter**: Reject if dimensions differ by >4× (overly elongated)
-   - **Uniqueness filter**: Reject if unique point ratio outside [0.1, 0.95] (too periodic or too dispersed)
+   - **Uniqueness filter**: Reject if unique point ratio outside [0.02, 0.98] (too periodic or too dispersed)
 4. **Full generation**: Regenerate accepted candidates at 2M points
-5. **Re-validation**: Apply filters to full-resolution data (some candidates fail at higher resolution)
+5. **Re-validation**: Apply filters to full-resolution data (some candidates fail at higher iterations)
 6. **Scoring and ranking**: Compute composite quality metric
 7. **Export**: Save visualizations and CSV parameter summary
 
@@ -94,7 +94,7 @@ $$\text{score} = \left(\frac{r_{\text{aspect}} - r_{\text{ideal,aspect}}}{\max(|
 - $r_{\text{aspect}}$ = aspect ratio (longer dimension ÷ shorter dimension)
 - $r_{\text{unique}}$ = fraction of unique points at 2 decimal precision
 - $r_{\text{ideal,aspect}} = 1.5$ (slightly rectangular for visual balance)
-- $r_{\text{ideal,unique}} \approx 0.67$ (balanced structure and complexity)
+- $r_{\text{ideal,unique}} = 0.\overline{66}$ (balanced structure and complexity)
 - Acceptable ranges: aspect $\in [1.0, 4.0]$, unique $\in [0.02, 0.98]$
 
 **Interpretation:**
@@ -121,8 +121,8 @@ pip install -e .
 # Or install with development tools (recommended for contributors)
 pip install -e ".[dev]"
 
-# Verify installation by running tests
-pytest
+# Verify installation / read help
+chaotic-attractors --help
 ```
 
 **Requirements:**
@@ -149,7 +149,7 @@ y_start = -0.64
 data = prepare_generate_data(
     params=params,
     equation_id='Tinkerbell',
-    test_iterations=25_000,
+    test_iterations=50_000,
     final_iterations=2_000_000,
     x_start=x_start,
     y_start=y_start
@@ -184,7 +184,7 @@ search_attractors(
         'c': (-3.0, 3.0),
         'd': (-3.0, 3.0)
     },
-    test_iterations=25_000,
+    test_iterations=50_000,
     final_iterations=2_000_000,
     start_counter=1,                   # Filename starting number
     save_format='png',
@@ -199,12 +199,12 @@ search_attractors(
 
 #### Generate Mode
 ```bash
-python -m chaotic_attractors \
+chaotic_attractors \
     --equation Custom3 \
     --a -2.17 --b -2.7 --c -2.08 --d -2.83 \
     --x-start 0.0 \
     --y-start 0.0 \
-    --test-iter 25_000 \
+    --test-iter 50000 \
     --final-iter 2000000 \
     --format png \
     --output-dir output \
@@ -213,7 +213,7 @@ python -m chaotic_attractors \
 
 #### Search Mode
 ```bash
-python -m chaotic_attractors \
+chaotic_attractors \
     --mode search \
     --equation Custom3 \
     --range-min -3 \
@@ -223,7 +223,7 @@ python -m chaotic_attractors \
     --decimals 2 \
     --num-to-find 10 \
     --max-attempts 50000 \
-    --test-iter 10000 \
+    --test-iter 50000 \
     --final-iter 2000000 \
     --format png \
     --output-dir output \
