@@ -144,8 +144,7 @@ def search_attractors(
                 print(
                     f"\rAttempts: {attempts} | "
                     f"Found: {len(found_attractors)}/{num_to_find} | "
-                    f"Elapsed: {elapsed_sec:.1f} sec | Rate: {rate:.2f} sec/test",
-                    end="",
+                    f"Elapsed: {elapsed_sec:.1f} sec | Rate: {1/rate:.2f} test/sec",
                     flush=True,
                 )
 
@@ -232,10 +231,10 @@ def search_attractors(
     finally:
         elapsed_minutes = (time.time() - start_time) / 60.0
         print(
-            f"\n\nSearch completed after {attempts} attempts "
+            f"\n\n{len(found_attractors)} attractores completed after {attempts} attempts "
             f"({elapsed_minutes:.2f} minutes)"
+            f"Rate: {elapsed_minutes/num_to_find:.2f} minutes/test"
         )
-        print(f"Found {len(found_attractors)} attractors")
 
         # Build summary table
         summary_rows = []
