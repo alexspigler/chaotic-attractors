@@ -195,7 +195,7 @@ search_attractors(
 
 #### Generate Mode
 ```bash
-chaotic_attractors \
+chaotic-attractors \
     --equation Custom3 \
     --a -2.17 --b -2.7 --c -2.08 --d -2.83 \
     --x-start 0.0 \
@@ -209,7 +209,7 @@ chaotic_attractors \
 
 #### Search Mode
 ```bash
-chaotic_attractors \
+chaotic-attractors \
     --mode search \
     --equation Custom3 \
     --range-min -3 \
