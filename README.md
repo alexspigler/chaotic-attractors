@@ -63,8 +63,6 @@ Create specific attractors from known parameters with high-quality visualization
 - Multi-format export (PNG, PDF, SVG) with equation annotation panels
 - Customizable colormaps, point sizing, and transparency
 
-**Use cases:** Reproducing known attractors, exploring parameter variations, creating publication figures
-
 ---
 
 ### Search Mode
@@ -103,8 +101,6 @@ $$\text{score} = \left(\frac{r_{\text{aspect}} - r_{\text{ideal,aspect}}}{\max(|
 - **Score range**: [0, 2] where 2 indicates both metrics at worst acceptable extremes
 
 The normalization ensures symmetric penalization—deviations above or below the ideal contribute equally. This is equivalent to the squared Euclidean distance in normalized parameter space.
-
-**Use cases:** Discovering new attractors, building galleries, parameter sensitivity studies
 
 ---
 
