@@ -16,6 +16,7 @@ from typing import Any, Callable, Dict, List, Optional, Tuple
 import matplotlib.pyplot as plt
 import numpy as np
 import numpy.typing as npt
+from matplotlib import colormaps
 from matplotlib.axes import Axes
 from matplotlib.colors import LinearSegmentedColormap
 from matplotlib.figure import Figure
@@ -298,7 +299,7 @@ def prepare_generate_data(
     x_start: float,
     y_start: float,
     equation_id: str,
-    test_iterations: int = 25_000,
+    test_iterations: int = 50_000,
     final_iterations: int = 2_000_000,
     kde_sample_size: int = 50_000,
 ) -> Dict[str, Any]:
@@ -406,7 +407,7 @@ def create_colormap(method: str, **kwargs: Any) -> LinearSegmentedColormap:
     """
     if method == "viridis":
         palette = kwargs.get("palette", VIRIDIS_PALETTE)
-        return plt.cm.get_cmap(palette)
+        return colormaps[palette]
 
     elif method == "gradient":
         low = kwargs.get("low", GRADIENT_LOW)
@@ -429,7 +430,7 @@ def create_colormap(method: str, **kwargs: Any) -> LinearSegmentedColormap:
 
     else:
         print(f"Warning: Unknown color method '{method}', defaulting to viridis")
-        return plt.cm.viridis
+        return colormaps["viridis"]
 
 
 def plot_chaotic(

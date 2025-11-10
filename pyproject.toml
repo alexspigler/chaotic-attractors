@@ -10,7 +10,7 @@ exclude = ["tests*", "images*"]
 [project]
 name = "chaotic-attractors"
 version = "1.0.0"
-description = "Python framework for discovering and visualizing 4-parameter chaotic dynamical systems"
+description = "Python toolkit for discovering and visualizing 4-parameter chaotic dynamical systems"
 readme = "README.md"
 requires-python = ">=3.8"
 license = {text = "MIT"}
@@ -92,30 +92,3 @@ ignore = [
 
 [tool.ruff.lint.per-file-ignores]
 "__init__.py" = ["F401"]  # imported but unused
-
-[tool.pytest.ini_options]
-minversion = "7.0"
-addopts = "-v --strict-markers --tb=short --cov=chaotic_attractors --cov-report=term-missing"
-testpaths = ["tests"]
-python_files = "test_*.py"
-python_classes = "Test*"
-python_functions = "test_*"
-filterwarnings = [
-    "ignore:overflow encountered:RuntimeWarning"
-]
-
-[tool.coverage.run]
-source = ["chaotic_attractors"]
-omit = ["*/tests/*", "*/__init__.py"]
-
-[tool.coverage.report]
-precision = 2
-show_missing = true
-skip_covered = false
-exclude_lines = [
-    "pragma: no cover",
-    "def __repr__",
-    "if __name__ == .__main__.:",
-    "raise AssertionError",
-    "raise NotImplementedError",
-]
