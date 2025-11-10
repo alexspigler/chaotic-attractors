@@ -9,6 +9,7 @@ Modes:
 import argparse
 import sys
 import textwrap
+import warnings
 
 from .core import (
     prepare_generate_data,
@@ -206,6 +207,9 @@ def main() -> None:
     """
     Entry point for the command-line interface.
     """
+    # Suppress runtime warnings
+    warnings.filterwarnings('ignore', category=RuntimeWarning)
+    
     parser = build_parser()
     args = parser.parse_args()
 
