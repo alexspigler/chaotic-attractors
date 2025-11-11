@@ -33,7 +33,7 @@ This project implements a computational pipeline for discovering, filtering, and
 - Two operational modes: targeted generation and automated discovery
 - Production-quality codebase with 50+ unit tests and comprehensive documentation
 - High-performance vectorized computation with NumPy
-- Publication-ready visualizations with density-based coloring
+- Publication-ready visualizations with density-based color mapping
 - Extensible architecture for adding new dynamical systems
 
 ---
@@ -63,7 +63,6 @@ Create specific attractors from known parameters with high-quality visualization
 - Multi-format export (PNG, PDF, SVG) with equation annotation panels
 - Customizable colormaps, point sizing, and transparency
 
----
 
 ### Search Mode
 
@@ -72,8 +71,8 @@ Discover novel attractors through automated exploration of parameter space.
 **Algorithm:**
 1. **Sampling**: Draw parameters uniformly from discrete grid (e.g., range [-3, 3] with 0.01 precision $\rightarrow$ 601 values per parameter $\rightarrow$ $601^4$ $\approx$ 130 billion total combinations)
 2. **Quick multi-stage evaluation**: Generate 100,000 test points for rapid filtering
-   - **Divergence check**: Reject if range > 500 units (divergent behavior)
-   - **Collapse check**: Reject if range < 0.25 units (collapsed behavior)  
+   - **Divergence check**: Reject if range > 500 units
+   - **Collapse check**: Reject if range < 0.25 units
    - **Aspect ratio filter**: Reject if dimensions differ by >4× (overly elongated)
 3. **Full generation**: Regenerate accepted candidates at 2M points
 4. **Re-validation**: Re-applies filters to fully generated data (some candidates fail at higher iterations)
@@ -85,12 +84,12 @@ Discover novel attractors through automated exploration of parameter space.
 
 Attractors are ranked by normalized squared deviation from ideal aesthetic characteristics:
 
-$$\text{score} = \left(\frac{r_{\text{aspect}} - r_{\text{ideal,aspect}}}{\max(|r_{\text{min}} - r_{\text{ideal,aspect}}|, |r_{\text{max}} - r_{\text{ideal,aspect}}|)}\right)^2 + \left(\frac{r_{\text{unique}} - r_{\text{ideal,unique}}}{\max(|r_{\text{min}} - r_{\text{ideal,unique}}|, |r_{\text{max}} - r_{\text{ideal,unique}}|)}\right)^2$$
+$$\text{score} = \left(\frac{r_{\text{aspect}} - r_{\text{ideal,aspect}}}{\max(|r_{\text{min,aspect}} - r_{\text{ideal,aspect}}|, |r_{\text{max,aspect}} - r_{\text{ideal,aspect}}|)}\right)^2 + \left(\frac{r_{\text{unique}} - r_{\text{ideal,unique}}}{\max(|r_{\text{min,unique}} - r_{\text{ideal,unique}}|, |r_{\text{max,unique}} - r_{\text{ideal,unique}}|)}\right)^2$$
 
 **Parameters:**
 - $r_{\text{aspect}}$ = aspect ratio (longer dimension / shorter dimension)
-- $r_{\text{unique}}$ = fraction of unique points at a certain decimal precision (default 3)
 - $r_{\text{ideal,aspect}} = 1.5$ (slightly rectangular for visual balance)
+- $r_{\text{unique}}$ = fraction of unique points at a certain decimal precision (default 3)
 - $r_{\text{ideal,unique}} = 0.\overline{66}$ (balanced structure and complexity)
 - Acceptable ranges: aspect $\in [1.0, 4.0]$, unique $\in [0.25, 1.0]$
 
