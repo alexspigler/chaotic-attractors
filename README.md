@@ -237,11 +237,11 @@ chaotic-attractors/
 │   ├── core.py                  # Generation, KDE, visualization
 │   ├── equations.py             # System definitions (9 attractors)
 │   └── search.py                # Stochastic search & filtering
+├── images/                      # Example outputs
 ├── tests/                       # Comprehensive test suite
 │   ├── test_core.py             # Core generation logic
 │   ├── test_equations.py        # Equation compilation
 │   └── test_search.py           # Parameter search & scoring
-├── images/                      # Example outputs
 ├── .gitignore                   # Version control exclusions
 ├── LICENSE                      # MIT License
 ├── pytest.ini                   # Test runner configuration
