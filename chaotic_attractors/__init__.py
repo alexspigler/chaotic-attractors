@@ -22,6 +22,7 @@ from .core import (
     convert_to_math_text,
     create_attractor_with_eq,
     create_colormap,
+    evaluate_attractor_first,
     generate_chaotic,
     plot_chaotic,
     prepare_generate_data,
@@ -29,7 +30,7 @@ from .core import (
 )
 from .equations import EQUATION_LIBRARY
 from .search import (
-    evaluate_attractor,
+    evaluate_attractor_second,
     generate_random,
     prepare_search_data,
     search_attractors,

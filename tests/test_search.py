@@ -6,7 +6,7 @@ import numpy as np
 import pytest
 
 from chaotic_attractors.search import (
-    evaluate_attractor,
+    evaluate_attractor_second,
     generate_random,
 )
 
@@ -64,14 +64,14 @@ class TestGenerateRandom:
 
 
 class TestEvaluateAttractor:
-    """Tests for the evaluate_attractor function."""
+    """Tests for the evaluate_attractor_second function."""
 
     def test_returns_dict_with_required_keys(self):
         """Test that output dictionary contains required keys."""
         params = {"a": 0.9, "b": -0.6, "c": 2.0, "d": 0.5}
         x_start = -0.72
         y_start = -0.64
-        result = evaluate_attractor(
+        result = evaluate_attractor_second(
             params=params,
             equation_id="Tinkerbell",
             x_start=x_start,
@@ -88,7 +88,7 @@ class TestEvaluateAttractor:
         params = {"a": 0.9, "b": -0.6013, "c": 2.0, "d": 0.5}
         x_start = -0.72
         y_start = -0.64
-        result = evaluate_attractor(
+        result = evaluate_attractor_second(
             params=params,
             equation_id="Tinkerbell",
             x_start=x_start,
@@ -109,7 +109,7 @@ class TestEvaluateAttractor:
         x_start = 1
         y_start = 1
 
-        result = evaluate_attractor(
+        result = evaluate_attractor_second(
             params=params,
             equation_id="Tinkerbell",
             x_start=x_start,
@@ -126,7 +126,7 @@ class TestEvaluateAttractor:
         x_start = 0
         y_start = 0
 
-        result = evaluate_attractor(
+        result = evaluate_attractor_second(
             params=params,
             equation_id="Tinkerbell",
             x_start=x_start,
@@ -146,7 +146,7 @@ class TestEvaluateAttractor:
         x_start = -0.72
         y_start = -0.64
 
-        result = evaluate_attractor(
+        result = evaluate_attractor_second(
             params=params,
             equation_id="Tinkerbell",
             x_start=x_start,
@@ -163,7 +163,7 @@ class TestEvaluateAttractor:
         x_start = -0.72
         y_start = -0.64
 
-        result = evaluate_attractor(
+        result = evaluate_attractor_second(
             params=params,
             equation_id="Tinkerbell",
             x_start=x_start,
@@ -181,7 +181,7 @@ class TestEvaluateAttractor:
         x_start = -0.72
         y_start = -0.64
 
-        result = evaluate_attractor(
+        result = evaluate_attractor_second(
             params=params,
             equation_id="Tinkerbell",
             x_start=x_start,
@@ -200,7 +200,7 @@ class TestEvaluateAttractor:
         x_start = -0.72
         y_start = -0.64
 
-        result = evaluate_attractor(
+        result = evaluate_attractor_second(
             params=params,
             equation_id="Unknown",
             x_start=x_start,
@@ -220,7 +220,7 @@ class TestEvaluateAttractor:
         x_start = -0.72
         y_start = -0.64
 
-        result = evaluate_attractor(
+        result = evaluate_attractor_second(
             params=params,
             equation_id="Tinkerbell",
             x_start=x_start,
@@ -235,12 +235,12 @@ class TestEvaluateAttractor:
 
 
 class TestEvaluateAttractorEdgeCases:
-    """Tests for edge cases in evaluate_attractor."""
+    """Tests for edge cases in evaluate_attractor_second."""
 
     def test_handles_all_zeros(self):
         """Test handling when all generated points are zero."""
         params = {"a": 0.0, "b": 0.0, "c": 0.0, "d": 0.0}
-        result = evaluate_attractor(params, "Tinkerbell", iterations=1000)
+        result = evaluate_attractor_second(params, "Tinkerbell", iterations=1000)
 
         assert result["score"] < 0.0
 
@@ -249,7 +249,7 @@ class TestEvaluateAttractorEdgeCases:
         params = {"a": 0.9, "b": -0.6, "c": 2.0, "d": 0.5}
         x_start = 100
         y_start = 100
-        result = evaluate_attractor(
+        result = evaluate_attractor_second(
             params=params,
             equation_id="Tinkerbell",
             x_start=x_start,
@@ -266,7 +266,7 @@ class TestEvaluateAttractorEdgeCases:
         x_start = -0.72
         y_start = -0.64
 
-        result = evaluate_attractor(
+        result = evaluate_attractor_second(
             params=params,
             equation_id="Tinkerbell",
             x_start=x_start,

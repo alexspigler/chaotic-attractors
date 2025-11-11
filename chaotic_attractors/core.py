@@ -20,6 +20,7 @@ from matplotlib import colormaps
 from matplotlib.axes import Axes
 from matplotlib.colors import LinearSegmentedColormap
 from matplotlib.figure import Figure
+from scipy.interpolate import griddata
 from scipy.stats import gaussian_kde
 
 from .equations import EQUATION_LIBRARY
@@ -149,7 +150,7 @@ def generate_chaotic(
     return x, y
 
 
-def evaluate_attractor(
+def evaluate_attractor_first(
     params: Dict[str, float],
     equation_id: str,
     x: np.ndarray = None,
@@ -158,9 +159,6 @@ def evaluate_attractor(
     y_start: float = None,
     min_small_side: float = 0.25,
     max_small_side: float = 500.0,
-    digits_unique: int = 2,
-    min_unique_ratio: float = 0.02,
-    max_unique_ratio: float = 0.98,
     max_aspect_ratio: float = 4.0,
     iterations: int = None,
 ) -> Dict[str, Any]:
@@ -172,11 +170,10 @@ def evaluate_attractor(
 
     Returns:
         Dictionary containing:
-            - score: float >= 0 if passed (lower is better), -1 if rejected
+            - score: 2 if passed, -1 if rejected
             - reason: str explaining rejection or 'Passed all checks'
             - x_range: float (if passed)
             - y_range: float (if passed)
-            - unique_ratio: float (if passed)
             - aspect_ratio: float (if passed)
     """
     # If data not provided, generate it
@@ -220,32 +217,13 @@ def evaluate_attractor(
     if x_diff < min_small_side or y_diff < min_small_side:
         return {
             "score": -1.0,
-            "reason": "Range too small - likely collapsed to a point or line",
+            "reason": f"Range too small ({'x_diff' if x_diff < y_diff else 'y_diff'} = {min(x_diff, y_diff):.2f}) - likely collapses",
         }
 
     if x_diff > max_small_side or y_diff > max_small_side:
         return {
             "score": -1.0,
-            "reason": "Range too large, likely diverges",
-        }
-
-    # Unique ratio
-    rounded_points = np.column_stack(
-        [np.round(x, digits_unique), np.round(y, digits_unique)]
-    )
-    unique_points = np.unique(rounded_points, axis=0)
-    unique_ratio = unique_points.shape[0] / rounded_points.shape[0]
-
-    if unique_ratio < min_unique_ratio:
-        return {
-            "score": -1.0,
-            "reason": "Low unique point ratio - likely a periodic orbit",
-        }
-
-    if unique_ratio > max_unique_ratio:
-        return {
-            "score": -1.0,
-            "reason": "High unique point ratio - too spread out / not interesting",
+            "reason": f"Range too large ({'x_diff' if x_diff > y_diff else 'y_diff'} = {max(x_diff, y_diff):.2f}), likely diverges",
         }
 
     aspect_ratio = x_diff / y_diff
@@ -254,42 +232,14 @@ def evaluate_attractor(
     if max_aspect_component > max_aspect_ratio:
         return {
             "score": -1.0,
-            "reason": "Bad aspect ratio",
+            "reason": f"Bad aspect ratio ({max_aspect_component:.2f})",
         }
 
-    # Scoring (0 is best)
-    # Measures normalized squared deviations from ideal characteristics
-    ideal_aspect_ratio = 3 / 2  # Prefer slightly rectangular attractors
-    ideal_unique_ratio = 2 / 3  # Balance between structure and complexity
-    min_aspect_ratio = 1.0
-
-    # Calculate maximum possible deviation in either direction from ideal
-    # This ensures symmetric penalization regardless of which side of ideal
-    max_aspect_deviation = max(
-        abs(min_aspect_ratio - ideal_aspect_ratio),
-        abs(max_aspect_ratio - ideal_aspect_ratio),
-    )
-
-    max_unique_deviation = max(
-        abs(min_unique_ratio - ideal_unique_ratio),
-        abs(max_unique_ratio - ideal_unique_ratio),
-    )
-
-    # Normalize deviations to [0, 1] scale (after squaring)
-    aspect_normalized = (
-        max_aspect_component - ideal_aspect_ratio
-    ) / max_aspect_deviation
-    unique_normalized = (unique_ratio - ideal_unique_ratio) / max_unique_deviation
-
-    # Range: [0, 2] where 0 = both metrics at ideal, 2 = both at worst extremes (that would pass filtering)
-    score_final = aspect_normalized**2 + unique_normalized**2
-
     return {
-        "score": score_final,
+        "score": 2,
         "reason": "Passed all checks",
         "x_range": x_diff,
         "y_range": y_diff,
-        "unique_ratio": unique_ratio,
         "aspect_ratio": aspect_ratio,
     }
 
@@ -299,7 +249,7 @@ def prepare_generate_data(
     x_start: float,
     y_start: float,
     equation_id: str,
-    test_iterations: int = 50_000,
+    test_iterations: int = 100_000,
     final_iterations: int = 2_000_000,
     kde_sample_size: int = 50_000,
 ) -> Dict[str, Any]:
@@ -311,11 +261,12 @@ def prepare_generate_data(
     """
 
     try:
+        print("")
         print(
             f"Testing parameter set with {test_iterations:,} iterations before full generation..."
         )
 
-        evaluation = evaluate_attractor(
+        evaluation = evaluate_attractor_first(
             params=params,
             x_start=x_start,
             y_start=y_start,
@@ -356,6 +307,8 @@ def prepare_generate_data(
                 f"Generated {len(x)}, need at least 10,000."
             )
 
+        print("Computing kernel density estimation...")
+
         # Compute density using KDE
         try:
             # Sample for KDE efficiency
@@ -366,7 +319,17 @@ def prepare_generate_data(
 
             # Calculate KDE
             kde = gaussian_kde(np.vstack([x_sample, y_sample]))
-            density = kde(np.vstack([x, y]))
+
+            # Evaluate KDE on the sample
+            density_sample = kde(np.vstack([x_sample, y_sample]))
+
+            density = griddata(
+                points=(x_sample, y_sample),
+                values=density_sample,
+                xi=(x, y),
+                method="linear",
+                fill_value=density_sample.min(),
+            )
 
             print(f"Initial Density Range: {density.min():.4f} to {density.max():.4f}")
 
