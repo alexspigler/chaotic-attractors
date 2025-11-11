@@ -266,7 +266,7 @@ def search_attractors(
         print(
             f"\n\n{len(found_attractors)} attractors completed after {attempts} attempts "
             f"({elapsed_minutes:.2f} minutes) "
-            f"Rate: {elapsed_minutes/num_to_find:.2f} minutes/test"
+            f"Rate: {len(found_attractors)/elapsed_minutes:.2f} attractors/minute"
         )
 
         # Build summary table
