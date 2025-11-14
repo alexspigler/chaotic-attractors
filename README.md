@@ -110,7 +110,7 @@ git clone https://github.com/alexspigler/chaotic-attractors.git
 cd chaotic-attractors
 
 # Install package with dependencies
-pip install -e .
+pip install .
 
 # Or install with development tools (recommended for contributors)
 pip install -e ".[dev]"
