@@ -76,7 +76,7 @@ Discover novel attractors through automated exploration of parameter space.
    - **Aspect ratio filter**: Reject if dimensions differ by >4× (overly elongated)
 3. **Full generation**: Regenerate accepted candidates at 2M points
 4. **Re-validation**: Re-applies filters to fully generated data (some candidates fail at higher iterations)
-    - **Added uniqueness filter**: Reject if unique point ratio outside below 0.25 (likely collapsed)
+    - **Added uniqueness filter**: Reject if unique point ratio below 0.25 (likely collapsed)
 5. **Scoring and ranking**: Compute composite quality metric
 6. **Export**: Save visualizations and CSV parameter summary
 
