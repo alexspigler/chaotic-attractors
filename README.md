@@ -293,7 +293,7 @@ Test configuration in `pyproject.toml` automatically enables verbose output, cov
 
 ## Author
 **Alex Spigler** — Statistics & Computer Science, George Washington University  
-[LinkedIn](https://www.linkedin.com/in/alexspigler/)
+[GitHub](https://github.com/alexspigler) · [LinkedIn](https://www.linkedin.com/in/alexspigler/)
 
 ---
 
