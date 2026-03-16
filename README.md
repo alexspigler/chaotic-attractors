@@ -1,6 +1,6 @@
 # Chaotic Attractors: Computational Exploration & Visualization
 
-A Python toolkit for automated discovery and visualization of 4-parameter chaotic systems through algorithmic parameter space exploration and statistical filtering.
+A Python package for automated discovery and visualization of 4-parameter chaotic systems through algorithmic parameter space exploration and statistical filtering.
 
 [![Python](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
