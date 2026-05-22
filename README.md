@@ -1,6 +1,6 @@
 # Chaotic Attractors: Computational Exploration & Visualization
 
-A Python package for automated discovery and visualization of 4-parameter chaotic systems through algorithmic parameter space exploration and statistical filtering.
+A Python package for automated discovery and visualization of 4-parameter chaotic systems through stochastic parameter-space search and multi-stage geometric filtering.
 
 [![Python](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
@@ -20,7 +20,7 @@ A Python package for automated discovery and visualization of 4-parameter chaoti
 | Name | Equation | Parameters | Initial Position |
 |-----------|-------------|---------------|-------|
 | **Tinkerbell** | $x_{n+1}=x_n^2-y_n^2+ax_n + by_n$<br>$y_{n+1}=2x_ny_n+cx_n+dy_n$ | $a=0.9$, $b=-0.6013$, $c=2.0$, $d=0.5$ | $x_0=-0.72$, $y_0=-0.64$ |
-| **Custom2**    | $x_{n+1}=a(e^{\cos(x_n)}-\frac{\pi}{2})+b(e^{\sin(y_n)}-\frac{\pi}{2})$<br>$x_{n+1}=c(e^{\cos(x_n)}-\frac{\pi}{2})+d(e^{\sin(y_n)}-\frac{\pi}{2})$ | $a=0.73$, $b=-2.6$, $c=2.31$, $d=1.65$ | $x_0=0$, $y_0=0$ |
+| **Custom2**    | $x_{n+1}=a(e^{\cos(x_n)}-\frac{\pi}{2})+b(e^{\sin(y_n)}-\frac{\pi}{2})$<br>$y_{n+1}=c(e^{\sin(x_n)}-\frac{\pi}{2})+d(e^{\cos(y_n)}-\frac{\pi}{2})$ | $a=0.73$, $b=-2.6$, $c=2.31$, $d=1.65$ | $x_0=0$, $y_0=0$ |
 | **Custom3**    | $x_{n+1}=ae^{\mathrm{arcsinh}(x_n)}-be^{\sin(y_n)}$<br>$y_{n+1}=ce^{\mathrm{arcsinh}(y_n)}-de^{\sin(x_n)}$ | $a=-2.17$, $b=-2.7$, $c=-2.08$, $d=-2.83$ | $x_0=0$, $y_0=0$ |
 
 ---
@@ -31,10 +31,11 @@ This project implements a computational pipeline for discovering, filtering, and
 
 **Key Features:**
 - Two operational modes: targeted generation and automated discovery
-- Production-quality codebase with 50+ unit tests and comprehensive documentation
-- High-performance vectorized computation with NumPy
-- Publication-ready visualizations with density-based color mapping
-- Extensible architecture for adding new dynamical systems
+- Stochastic search over a continuous 4-parameter space with cheap-to-expensive staged filtering
+- Density-based coloring via Gaussian KDE on a subsample, interpolated across the full trajectory
+- Multi-format vector/raster export (PNG/PDF/SVG) with rendered equation panels
+- Extensible system library — add an attractor with one dictionary entry
+- 50+ unit tests; pip-installable with a CLI
 
 ---
 
@@ -57,8 +58,8 @@ where $(x_0, y_0)$ are initial conditions and $(a, b, c, d)$ are system paramete
 Create specific attractors from known parameters with high-quality visualization.
 
 **Features:**
-- Vectorized NumPy computation generating 2M+ iterations
-- Gaussian KDE calculated on 50,000-point subsample and interpolated across full dataset for efficient density-based color maps
+- Iterative trajectory generation with preallocated NumPy arrays
+- Density-based coloring: Gaussian KDE on a 50,000-point subsample, interpolated across the full trajectory (avoids infeasible full-set KDE)
 - NaN/Inf filtering with early termination for numerical stability
 - Multi-format export (PNG, PDF, SVG) with equation annotation panels
 - Customizable colormaps, point sizing, and transparency
@@ -89,7 +90,7 @@ $$\text{score} = \left(\frac{r_{\text{aspect}} - r_{\text{ideal,aspect}}}{\max(|
 **Parameters:**
 - $r_{\text{aspect}}$ = aspect ratio (longer dimension / shorter dimension)
 - $r_{\text{ideal,aspect}} = 1.5$ (slightly rectangular for visual balance)
-- $r_{\text{unique}}$ = fraction of unique points at a certain decimal precision (default 3)
+- $r_{\text{unique}}$ = fraction of unique points at a certain decimal precision (default 4)
 - $r_{\text{ideal,unique}} = 0.\overline{66}$ (balanced structure and complexity)
 - Acceptable ranges: aspect $\in [1.0, 4.0]$, unique $\in [0.25, 1.0]$
 
@@ -237,7 +238,7 @@ chaotic-attractors/
 │   ├── equations.py             # System definitions (9 attractors)
 │   └── search.py                # Stochastic search & filtering
 ├── images/                      # Example outputs
-├── tests/                       # Comprehensive test suite
+├── tests/                       # Unit test suite
 │   ├── test_core.py             # Core generation logic
 │   ├── test_equations.py        # Equation compilation
 │   └── test_search.py           # Parameter search & scoring
@@ -252,11 +253,11 @@ chaotic-attractors/
 
 **`core.py`**: Numerical computation and rendering
 - Runtime equation compilation with restricted `eval` namespace
-- Vectorized trajectory generation with pre-allocated arrays
+- Iterative trajectory generation with pre-allocated arrays
 - NaN/Inf filtering with early termination
 - Gaussian KDE on 50K subsamples for density estimation
 - Custom colormap construction
-- Multi-format export with LaTeX equation rendering
+- Multi-format export with rendered equation panels (Matplotlib mathtext)
 
 **`search.py`**: Parameter space exploration
 - Discrete uniform sampling with configurable precision
@@ -275,7 +276,7 @@ chaotic-attractors/
 
 50+ unit tests across 3 modules ensuring code quality and correctness:
 
-* `test_core.py`: Generation, KDE, visualization, LaTeX conversion
+* `test_core.py`: Generation, KDE, visualization, mathtext conversion
 * `test_equations.py`: All 9 systems validated with parametrized tests
 * `test_search.py`: Random sampling, evaluation, scoring, edge cases
 
@@ -287,7 +288,7 @@ pytest
 open htmlcov/index.html
 ```
 
-Test configuration in `pyproject.toml` automatically enables verbose output, coverage measurement, and HTML report generation.
+Test configuration in `pytest.ini` automatically enables verbose output, coverage measurement, and HTML report generation.
 
 ---
 
