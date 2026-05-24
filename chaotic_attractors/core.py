@@ -74,6 +74,8 @@ def _compile_equation(
     eq_str = eq_str.replace("y[n-1]", "y_prev")
 
     func_str = f"lambda x_prev, y_prev, a, b, c, d: {eq_str}"
+    # Safe to eval: eq_str comes only from the hardcoded EQUATION_LIBRARY (never
+    # user input), and the namespace exposes only NumPy with built-ins disabled.
     namespace = {"np": np, "__builtins__": {}}
 
     try:
@@ -104,7 +106,7 @@ def generate_chaotic(
     equation_id: str,
     x_start: float,
     y_start: float,
-    iterations: int = None,
+    iterations: Optional[int] = None,
 ) -> Tuple[npt.NDArray[np.float64], npt.NDArray[np.float64]]:
     """
     Generate trajectory points for a chaotic attractor using iterative equations.
@@ -153,14 +155,14 @@ def generate_chaotic(
 def evaluate_attractor_first(
     params: Dict[str, float],
     equation_id: str,
-    x: np.ndarray = None,
-    y: np.ndarray = None,
-    x_start: float = None,
-    y_start: float = None,
+    x: Optional[np.ndarray] = None,
+    y: Optional[np.ndarray] = None,
+    x_start: Optional[float] = None,
+    y_start: Optional[float] = None,
     min_small_side: float = 0.25,
     max_small_side: float = 500.0,
     max_aspect_ratio: float = 4.0,
-    iterations: int = None,
+    iterations: Optional[int] = None,
 ) -> Dict[str, Any]:
     """
     Evaluate parameter set quality using geometric and statistical checks.

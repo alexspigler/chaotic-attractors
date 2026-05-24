@@ -23,11 +23,13 @@ A Python package for automated discovery and visualization of 4-parameter chaoti
 | **Custom2**    | $x_{n+1}=a(e^{\cos(x_n)}-\frac{\pi}{2})+b(e^{\sin(y_n)}-\frac{\pi}{2})$<br>$y_{n+1}=c(e^{\sin(x_n)}-\frac{\pi}{2})+d(e^{\cos(y_n)}-\frac{\pi}{2})$ | $a=0.73$, $b=-2.6$, $c=2.31$, $d=1.65$ | $x_0=0$, $y_0=0$ |
 | **Custom3**    | $x_{n+1}=ae^{\mathrm{arcsinh}(x_n)}-be^{\sin(y_n)}$<br>$y_{n+1}=ce^{\mathrm{arcsinh}(y_n)}-de^{\sin(x_n)}$ | $a=-2.17$, $b=-2.7$, $c=-2.08$, $d=-2.83$ | $x_0=0$, $y_0=0$ |
 
+> **Reproducing Tinkerbell:** it requires a non-zero initial position, so pass `--x-start -0.72 --y-start -0.64` (the CLI defaults are `0, 0`, which Custom2 and Custom3 use).
+
 ---
 
 ## Overview
 
-This project implements a computational pipeline for discovering, filtering, and visualizing chaotic attractors&mdash;complex fractal structures that emerge from deterministic iterative systems. The library includes 9 equation systems: 5 classical attractors (Clifford, Tinkerbell, Fractal Dream, Peter de Jong, Johnny Svensson) and 4 custom-designed variants.
+This project implements a computational pipeline for discovering, filtering, and visualizing chaotic attractors&mdash;complex fractal structures that emerge from deterministic iterative systems. The library includes 9 equation systems: 5 classical attractors (Clifford, Tinkerbell, Fractal Dreams, Peter de Jong, Johnny Svensson) and 4 custom-designed variants.
 
 **Key Features:**
 - Two operational modes: targeted generation and automated discovery

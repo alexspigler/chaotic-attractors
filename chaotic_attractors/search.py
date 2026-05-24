@@ -11,7 +11,7 @@ This module provides:
 import csv
 import os
 import time
-from typing import Any, Dict, Tuple
+from typing import Any, Dict, Optional, Tuple
 
 import numpy as np
 import numpy.typing as npt
@@ -389,17 +389,17 @@ def prepare_search_data(
 def evaluate_attractor_second(
     params: Dict[str, float],
     equation_id: str,
-    x: np.ndarray = None,
-    y: np.ndarray = None,
-    x_start: float = None,
-    y_start: float = None,
+    x: Optional[np.ndarray] = None,
+    y: Optional[np.ndarray] = None,
+    x_start: Optional[float] = None,
+    y_start: Optional[float] = None,
     min_small_side: float = 0.25,
     max_small_side: float = 500.0,
     digits_unique: int = 4,
     min_unique_ratio: float = 0.25,
     max_unique_ratio: float = 1.0,
     max_aspect_ratio: float = 4.0,
-    iterations: int = None,
+    iterations: Optional[int] = None,
 ) -> Dict[str, Any]:
     """
     Evaluate parameter set quality using geometric and statistical checks.
