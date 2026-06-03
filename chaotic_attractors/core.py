@@ -11,7 +11,7 @@ Author: Alex Spigler
 
 import os
 import re
-from typing import Any, Callable, Dict, List, Optional, Tuple
+from typing import Any, Callable, Dict, List, Tuple
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -106,7 +106,7 @@ def generate_chaotic(
     equation_id: str,
     x_start: float,
     y_start: float,
-    iterations: Optional[int] = None,
+    iterations: int | None = None,
 ) -> Tuple[npt.NDArray[np.float64], npt.NDArray[np.float64]]:
     """
     Generate trajectory points for a chaotic attractor using iterative equations.
@@ -119,18 +119,14 @@ def generate_chaotic(
 
     a, b, c, d = params["a"], params["b"], params["c"], params["d"]
 
-    # Pre-allocate arrays
     x = np.zeros(iterations, np.float64)
     y = np.zeros(iterations, np.float64)
 
-    # Set initial conditions
     x[0] = x_start
     y[0] = y_start
 
-    # Get compiled equation functions
     x_func, y_func = _get_equation_functions(equation_id)
 
-    # Iterate through the dynamical system
     valid_length = iterations
     for n in range(1, iterations):
         try:
@@ -155,14 +151,14 @@ def generate_chaotic(
 def evaluate_attractor_first(
     params: Dict[str, float],
     equation_id: str,
-    x: Optional[np.ndarray] = None,
-    y: Optional[np.ndarray] = None,
-    x_start: Optional[float] = None,
-    y_start: Optional[float] = None,
+    x: np.ndarray | None = None,
+    y: np.ndarray | None = None,
+    x_start: float | None = None,
+    y_start: float | None = None,
     min_small_side: float = 0.25,
     max_small_side: float = 500.0,
     max_aspect_ratio: float = 4.0,
-    iterations: Optional[int] = None,
+    iterations: int | None = None,
 ) -> Dict[str, Any]:
     """
     Evaluate parameter set quality using geometric and statistical checks.
@@ -201,7 +197,6 @@ def evaluate_attractor_first(
     x = np.asarray(x)
     y = np.asarray(y)
 
-    # Remove non-finite values
     finite_mask = np.isfinite(x) & np.isfinite(y)
     x = x[finite_mask]
     y = y[finite_mask]
@@ -215,7 +210,6 @@ def evaluate_attractor_first(
     x_diff = np.max(x) - np.min(x)
     y_diff = np.max(y) - np.min(y)
 
-    # Range checks
     if x_diff < min_small_side or y_diff < min_small_side:
         return {
             "score": -1.0,
@@ -244,6 +238,57 @@ def evaluate_attractor_first(
         "y_range": y_diff,
         "aspect_ratio": aspect_ratio,
     }
+
+
+def _compute_density(
+    x: npt.NDArray[np.float64],
+    y: npt.NDArray[np.float64],
+    kde_sample_size: int = 50_000,
+) -> npt.NDArray[np.float64]:
+    """
+    Estimate per-point density with a Gaussian KDE.
+
+    The KDE is fit and evaluated on a random subsample, then interpolated
+    across the full trajectory. Subsampling keeps the kernel evaluation at
+    O(sample^2) instead of O(n^2) on the full (up to multi-million) point set.
+    Returns density normalized to [0, 1], or uniform density if the estimate
+    cannot be computed.
+    """
+    print("Computing kernel density estimation...")
+    try:
+        sample_size = min(len(x), kde_sample_size)
+        indices = np.random.choice(len(x), sample_size, replace=False)
+        x_sample = x[indices]
+        y_sample = y[indices]
+
+        kde = gaussian_kde(np.vstack([x_sample, y_sample]))
+        density_sample = kde(np.vstack([x_sample, y_sample]))
+
+        density = griddata(
+            points=(x_sample, y_sample),
+            values=density_sample,
+            xi=(x, y),
+            method="linear",
+            fill_value=density_sample.min(),
+        )
+        print(f"Initial Density Range: {density.min():.4f} to {density.max():.4f}")
+
+        density_range = density.max() - density.min()
+        if density_range != 0:
+            density = (density - density.min()) / density_range
+            print(
+                f"Normalized Density Range: {density.min():.2f} to {density.max():.2f}"
+            )
+        else:
+            density = np.ones(len(x), np.float64)
+            print("Warning: Density is a constant--normalized to 1")
+
+    except Exception as e:
+        print(f"Warning: Could not compute KDE density: {e}")
+        print("Falling back to uniform density")
+        density = np.ones(len(x), np.float64)
+
+    return density
 
 
 def prepare_generate_data(
@@ -276,7 +321,6 @@ def prepare_generate_data(
             iterations=test_iterations,
         )
 
-        # Skip if evaluation failed
         if evaluation["score"] < 0:
             raise ValueError(f"Attractor validation failed: {evaluation['reason']}")
 
@@ -284,7 +328,6 @@ def prepare_generate_data(
         print("Initial tests passed")
         print(f"Generating full attractor with {final_iterations:,} iterations")
 
-        # Generate points
         x, y = generate_chaotic(
             params=params,
             equation_id=equation_id,
@@ -297,59 +340,17 @@ def prepare_generate_data(
         print(f"X range: [{x.min():.3f}, {x.max():.3f}]")
         print(f"Y range: [{y.min():.3f}, {y.max():.3f}]")
 
-        # Remove any NaN or Inf values
         valid_mask = np.isfinite(x) & np.isfinite(y)
         x = x[valid_mask]
         y = y[valid_mask]
 
-        # Validate sufficient data
         if len(x) < 10_000:
             raise ValueError(
                 f"Insufficient valid points for plotting an attractor:\n"
                 f"Generated {len(x)}, need at least 10,000."
             )
 
-        print("Computing kernel density estimation...")
-
-        # Compute density using KDE
-        try:
-            # Sample for KDE efficiency
-            sample_size = min(len(x), kde_sample_size)
-            indices = np.random.choice(len(x), sample_size, replace=False)
-            x_sample = x[indices]
-            y_sample = y[indices]
-
-            # Calculate KDE
-            kde = gaussian_kde(np.vstack([x_sample, y_sample]))
-
-            # Evaluate KDE on the sample
-            density_sample = kde(np.vstack([x_sample, y_sample]))
-
-            density = griddata(
-                points=(x_sample, y_sample),
-                values=density_sample,
-                xi=(x, y),
-                method="linear",
-                fill_value=density_sample.min(),
-            )
-
-            print(f"Initial Density Range: {density.min():.4f} to {density.max():.4f}")
-
-            # Normalize density to [0, 1]
-            density_range = density.max() - density.min()
-            if density_range != 0:
-                density = (density - density.min()) / density_range
-                print(
-                    f"Normalized Density Range: {density.min():.2f} to {density.max():.2f}"
-                )
-            else:
-                density = np.ones(len(x), np.float64)
-                print("Warning: Density is a constant--normalized to 1")
-
-        except Exception as e:
-            print(f"Warning: Could not compute KDE density: {e}")
-            print("Falling back to uniform density")
-            density = np.ones(len(x), np.float64)
+        density = _compute_density(x, y, kde_sample_size)
 
         return {
             "x": x,
@@ -404,7 +405,7 @@ def plot_chaotic(
     alpha: float = ALPHA_DEFAULT,
     background_color: str = "white",
     color_method: str = COLOR_METHOD,
-    figsize: Optional[Tuple[float, float]] = None,
+    figsize: Tuple[float, float] | None = None,
     dpi: int = 300,
     **color_kwargs: Any,
 ) -> Tuple[Figure, Axes]:
@@ -413,7 +414,6 @@ def plot_chaotic(
     y = data["y"]
     density = data["density"]
 
-    # Calculate aspect ratio
     x_range = x.max() - x.min()
     y_range = y.max() - y.min()
 
@@ -422,19 +422,15 @@ def plot_chaotic(
     else:
         aspect_ratio = x_range / y_range
 
-    # Auto-calculate figure size if not provided
     if figsize is None:
         width = 12
         height = width / aspect_ratio
         figsize = (width, height)
 
-    # Create figure and axis
     fig, ax = plt.subplots(figsize=figsize, dpi=dpi, facecolor=background_color)
 
-    # Create colormap
     cmap = create_colormap(color_method, **color_kwargs)
 
-    # Plot the attractor
     ax.scatter(
         x,
         y,
@@ -446,7 +442,6 @@ def plot_chaotic(
         rasterized=False,
     )
 
-    # Formatting
     ax.set_aspect("equal")
     ax.axis("off")
     ax.set_facecolor(background_color)
@@ -475,12 +470,10 @@ def save_attractor(
     """
     try:
 
-        # Get equation_id from data
         equation_id = data.get("equation_id")
         if include_info and equation_id is None:
             raise ValueError("include_info=True requires equation_id in data dict")
 
-        # Set prefix to equation_id if not provided
         if prefix is None:
             if equation_id is None:
                 raise ValueError(
@@ -488,13 +481,10 @@ def save_attractor(
                 )
             prefix = equation_id
 
-        # Create output directory if it doesn't exist
         os.makedirs(output_dir, exist_ok=True)
 
-        # Construct base filename
         base_filename = f"{prefix}_{start_counter}"
 
-        # Determine which formats to save
         if save_format == "all":
             formats = ["png", "pdf", "svg"]
         else:
@@ -548,11 +538,9 @@ def save_attractor(
 
 def convert_to_math_text(eq_str: str) -> str:
     """Convert Python equation syntax to matplotlib math text for matplotlib rendering."""
-    # Remove Python-specific syntax
     eq_str = eq_str.replace("np.", "")
     eq_str = eq_str.replace("[n-1]", "_n")  # Array index to subscript
 
-    # Convert operators to LaTeX
     eq_str = eq_str.replace(" * ", "")
     eq_str = eq_str.replace("pi", r"\pi")
 
@@ -600,7 +588,6 @@ def create_attractor_with_eq(
     x = data["x"]
     y = data["y"]
 
-    # Calculate aspect ratio
     x_range = x.max() - x.min()
     y_range = y.max() - y.min()
 
@@ -609,14 +596,11 @@ def create_attractor_with_eq(
     else:
         aspect_ratio = x_range / y_range
 
-    # Get equations for display
     x_eq_raw = EQUATION_LIBRARY[equation_id]["x_eq"]
     y_eq_raw = EQUATION_LIBRARY[equation_id]["y_eq"]
-    # Convert to LaTeX math text
     x_eq_math = convert_to_math_text(x_eq_raw)
     y_eq_math = convert_to_math_text(y_eq_raw)
 
-    # Create figure with space for text panel below
     figsize = plot_kwargs.get("figsize", None)
     if figsize is None:
         width = 12
@@ -640,14 +624,11 @@ def create_attractor_with_eq(
         bottom=0.05,
     )
 
-    # Main attractor plot
     ax_main = fig.add_subplot(gs[0, 0])
 
-    # Get colormap
     color_method = plot_kwargs.get("color_method", COLOR_METHOD)
     cmap = create_colormap(color_method, **plot_kwargs)
 
-    # Plot attractor
     ax_main.scatter(
         x,
         y,
@@ -663,12 +644,10 @@ def create_attractor_with_eq(
     ax_main.axis("off")
     ax_main.set_facecolor(background_color)
 
-    # Text panel for equations and parameters
     ax_text = fig.add_subplot(gs[1, 0])
     ax_text.axis("off")
     ax_text.set_facecolor(background_color)
 
-    # Build info text
     info_lines = [
         rf"$x_{{n+1}} = {x_eq_math}$",
         rf"$y_{{n+1}} = {y_eq_math}$",
@@ -678,7 +657,6 @@ def create_attractor_with_eq(
     ]
     info_text = "\n".join(info_lines)
 
-    # Add centered text to panel
     ax_text.text(
         0.5,
         0.5,

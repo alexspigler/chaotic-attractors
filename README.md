@@ -2,9 +2,6 @@
 
 A Python package for automated discovery and visualization of 4-parameter chaotic systems through stochastic parameter-space search and multi-stage geometric filtering.
 
-[![Python](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-
 ---
 
 ## Gallery
@@ -31,9 +28,9 @@ A Python package for automated discovery and visualization of 4-parameter chaoti
 
 This project implements a computational pipeline for discovering, filtering, and visualizing chaotic attractors&mdash;complex fractal structures that emerge from deterministic iterative systems. The library includes 9 equation systems: 5 classical attractors (Clifford, Tinkerbell, Fractal Dreams, Peter de Jong, Johnny Svensson) and 4 custom-designed variants.
 
-**Key Features:**
+**Features**
 - Two operational modes: targeted generation and automated discovery
-- Stochastic search over a continuous 4-parameter space with cheap-to-expensive staged filtering
+- Stochastic search over a discretized 4-parameter space, screening cheap candidates before the expensive full simulation
 - Density-based coloring via Gaussian KDE on a subsample, interpolated across the full trajectory
 - Multi-format vector/raster export (PNG/PDF/SVG) with rendered equation panels
 - Extensible system library — add an attractor with one dictionary entry
@@ -61,7 +58,7 @@ Create specific attractors from known parameters with high-quality visualization
 
 **Features:**
 - Iterative trajectory generation with preallocated NumPy arrays
-- Density-based coloring: Gaussian KDE on a 50,000-point subsample, interpolated across the full trajectory (avoids infeasible full-set KDE)
+- Density-based coloring: Gaussian KDE on a 50,000-point subsample, interpolated across the full trajectory (avoids running the full KDE on every point)
 - NaN/Inf filtering with early termination for numerical stability
 - Multi-format export (PNG, PDF, SVG) with equation annotation panels
 - Customizable colormaps, point sizing, and transparency
@@ -123,7 +120,7 @@ chaotic-attractors --help
 ```
 
 **Requirements:**
-- Python 3.8+
+- Python 3.10+
 - NumPy, SciPy, Matplotlib (installed automatically)
 - pytest, pytest-cov (included with `[dev]` installation)
 
@@ -283,20 +280,21 @@ chaotic-attractors/
 * `test_search.py`: Random sampling, evaluation, scoring, edge cases
 
 ```bash
-# Run full test suite with coverage
+# Run the test suite
 pytest
 
-# View detailed coverage report
+# Run with a coverage report (requires the [dev] extras)
+pytest --cov=chaotic_attractors --cov-report=html
 open htmlcov/index.html
 ```
 
-Test configuration in `pytest.ini` automatically enables verbose output, coverage measurement, and HTML report generation.
+`pytest.ini` enables verbose output and short tracebacks by default.
 
 ---
 
 ## Author
 **Alex Spigler** — Statistics & Computer Science, George Washington University  
-[GitHub](https://github.com/alexspigler) · [LinkedIn](https://www.linkedin.com/in/alexspigler/)
+[GitHub](https://github.com/alexspigler) · [LinkedIn](https://linkedin.com/in/alexspigler)
 
 ---
 

@@ -11,15 +11,14 @@ This module provides:
 import csv
 import os
 import time
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Dict, Tuple
 
 import numpy as np
 import numpy.typing as npt
-from scipy.interpolate import griddata
-from scipy.stats import gaussian_kde
 
 from .core import (
     COLOR_METHOD,
+    _compute_density,
     GRADIENT_HIGH,
     GRADIENT_LOW,
     VIRIDIS_PALETTE,
@@ -98,10 +97,8 @@ def search_attractors(
             "d": (-3, 3),
         }
 
-    # Create output directory if it doesn't exist
     os.makedirs(output_dir, exist_ok=True)
 
-    # Set prefix to equation_id if not provided
     if prefix is None:
         prefix = equation_id
 
@@ -116,7 +113,6 @@ def search_attractors(
         while len(found_attractors) < num_to_find and attempts < max_attempts:
             attempts += 1
 
-            # Sample parameters with limited decimals
             params = {
                 "a": generate_random(
                     parameter_ranges["a"][0], parameter_ranges["a"][1], decimals
@@ -152,11 +148,9 @@ def search_attractors(
                     flush=True,
                 )
 
-            # Skip if evaluation failed
             if evaluation["score"] < 0:
                 continue
 
-            # Passed quick checks
             print("\n\nInitial tests passed")
             print(
                 f"Found candidate {attractor_num} at attempt {attempts} "
@@ -165,7 +159,6 @@ def search_attractors(
             )
             print(f"Generating full attractor with {final_iterations:,} iterations")
 
-            # Generate points
             x, y = generate_chaotic(
                 params=params,
                 equation_id=equation_id,
@@ -178,19 +171,16 @@ def search_attractors(
             print(f"X range: [{x.min():.3f}, {x.max():.3f}]")
             print(f"Y range: [{y.min():.3f}, {y.max():.3f}]")
 
-            # Remove any NaN or Inf values
             valid_mask = np.isfinite(x) & np.isfinite(y)
             x = x[valid_mask]
             y = y[valid_mask]
 
-            # Validate sufficient data
             if len(x) < 10_000:
                 raise ValueError(
                     f"Insufficient valid points for plotting an attractor:\n"
                     f"Generated {len(x)}, need at least 10,000."
                 )
 
-            # second evaluation
             evaluation = evaluate_attractor_second(
                 params=params,
                 equation_id=equation_id,
@@ -204,7 +194,6 @@ def search_attractors(
                 max_aspect_ratio=max_aspect_ratio,
             )
 
-            # Skip if evaluation failed
             if evaluation["score"] < 0:
                 print(f"Attractor validation failed: {evaluation['reason']}")
                 print("")
@@ -224,7 +213,6 @@ def search_attractors(
                 print(f"Skipped attractor {attractor_num} due to data prep error: {e}")
                 continue
 
-            # Passed final checks
             print("Final tests passed")
             print(
                 f"Score: {evaluation['score']:.2f} | "
@@ -234,7 +222,6 @@ def search_attractors(
                 f"Unique ratio: {evaluation['unique_ratio']:.3f}"
             )
 
-            # Save attractor image
             saved_files = save_attractor(
                 data=data,
                 x_start=x_start,
@@ -269,7 +256,6 @@ def search_attractors(
             f"Rate: {len(found_attractors)/elapsed_minutes:.2f} attractors/minute"
         )
 
-        # Build summary table
         summary_rows = []
         for index, attr in enumerate(found_attractors, start=start_counter):
             eval_ = attr["evaluation"]
@@ -287,7 +273,9 @@ def search_attractors(
             }
             summary_rows.append(row)
 
-        # Write CSV summary
+        # Rank best-first: lower score = closer to the ideal aspect/density shape
+        summary_rows.sort(key=lambda r: r["score"])
+
         if summary_rows:
             csv_path = os.path.join(output_dir, f"{prefix}_summary.csv")
             fieldnames = [
@@ -335,47 +323,7 @@ def prepare_search_data(
     Returns dict with keys: 'x', 'y', 'density' (normalized 0-1), 'params'.
     Raises ValueError if fewer than 10,000 valid points are generated.
     """
-    print("Computing kernel density estimation...")
-
-    # Compute density using KDE
-    try:
-        # Sample for KDE efficiency
-        sample_size = min(len(x), kde_sample_size)
-        indices = np.random.choice(len(x), sample_size, replace=False)
-        x_sample = x[indices]
-        y_sample = y[indices]
-
-        # Calculate KDE
-        kde = gaussian_kde(np.vstack([x_sample, y_sample]))
-
-        # Evaluate KDE on the sample
-        density_sample = kde(np.vstack([x_sample, y_sample]))
-
-        density = griddata(
-            points=(x_sample, y_sample),
-            values=density_sample,
-            xi=(x, y),
-            method="linear",
-            fill_value=density_sample.min(),
-        )
-
-        print(f"Initial Density Range: {density.min():.4f} to {density.max():.4f}")
-
-        # Normalize density to [0, 1]
-        density_range = density.max() - density.min()
-        if density_range != 0:
-            density = (density - density.min()) / density_range
-            print(
-                f"Normalized Density Range: {density.min():.2f} to {density.max():.2f}"
-            )
-        else:
-            density = np.ones(len(x), np.float64)
-            print("Warning: Density is a constant--normalized to 1")
-
-    except Exception as e:
-        print(f"Warning: Could not compute KDE density: {e}")
-        print("Falling back to uniform density")
-        density = np.ones(len(x), np.float64)
+    density = _compute_density(x, y, kde_sample_size)
 
     return {
         "x": x,
@@ -389,17 +337,17 @@ def prepare_search_data(
 def evaluate_attractor_second(
     params: Dict[str, float],
     equation_id: str,
-    x: Optional[np.ndarray] = None,
-    y: Optional[np.ndarray] = None,
-    x_start: Optional[float] = None,
-    y_start: Optional[float] = None,
+    x: np.ndarray | None = None,
+    y: np.ndarray | None = None,
+    x_start: float | None = None,
+    y_start: float | None = None,
     min_small_side: float = 0.25,
     max_small_side: float = 500.0,
     digits_unique: int = 4,
     min_unique_ratio: float = 0.25,
     max_unique_ratio: float = 1.0,
     max_aspect_ratio: float = 4.0,
-    iterations: Optional[int] = None,
+    iterations: int | None = None,
 ) -> Dict[str, Any]:
     """
     Evaluate parameter set quality using geometric and statistical checks.
@@ -439,7 +387,6 @@ def evaluate_attractor_second(
     x = np.asarray(x)
     y = np.asarray(y)
 
-    # Remove non-finite values
     finite_mask = np.isfinite(x) & np.isfinite(y)
     x = x[finite_mask]
     y = y[finite_mask]
@@ -453,7 +400,6 @@ def evaluate_attractor_second(
     x_diff = np.max(x) - np.min(x)
     y_diff = np.max(y) - np.min(y)
 
-    # Range checks
     if x_diff < min_small_side or y_diff < min_small_side:
         return {
             "score": -1.0,
