@@ -216,7 +216,7 @@ def main() -> None:
             # Start from defaults and override if flags are provided
             equation_id = args.equation or DEFAULT_EQUATION
 
-            params = DEFAULT_PARAMS
+            params = DEFAULT_PARAMS.copy()
             if args.a is not None:
                 params["a"] = args.a
             if args.b is not None:

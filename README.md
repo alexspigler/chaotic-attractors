@@ -34,7 +34,7 @@ This project implements a computational pipeline for discovering, filtering, and
 - Density-based coloring via Gaussian KDE on a subsample, interpolated across the full trajectory
 - Multi-format vector/raster export (PNG/PDF/SVG) with rendered equation panels
 - Extensible system library — add an attractor with one dictionary entry
-- 50+ unit tests; pip-installable with a CLI
+- 82 unit tests; pip-installable with a CLI
 
 ---
 
@@ -273,7 +273,7 @@ chaotic-attractors/
 
 ## Testing & Validation
 
-50+ unit tests across 3 modules ensuring code quality and correctness:
+82 unit tests across 3 modules ensuring code quality and correctness:
 
 * `test_core.py`: Generation, KDE, visualization, mathtext conversion
 * `test_equations.py`: All 9 systems validated with parametrized tests

@@ -144,7 +144,7 @@ def search_attractors(
                 print(
                     f"\rAttempts: {attempts} | "
                     f"Found: {len(found_attractors)}/{num_to_find} | "
-                    f"Elapsed: {elapsed_sec:.1f} sec | Rate: {1/rate:.2f} test/sec",
+                    f"Elapsed: {elapsed_sec:.1f} sec | Rate: {1 / rate:.2f} test/sec",
                     flush=True,
                 )
 
@@ -253,7 +253,7 @@ def search_attractors(
         print(
             f"\n\n{len(found_attractors)} attractors completed after {attempts} attempts "
             f"({elapsed_minutes:.2f} minutes) "
-            f"Rate: {len(found_attractors)/elapsed_minutes:.2f} attractors/minute"
+            f"Rate: {len(found_attractors) / elapsed_minutes:.2f} attractors/minute"
         )
 
         summary_rows = []
@@ -321,7 +321,6 @@ def prepare_search_data(
     Compute density using KDE for visualization.
 
     Returns dict with keys: 'x', 'y', 'density' (normalized 0-1), 'params'.
-    Raises ValueError if fewer than 10,000 valid points are generated.
     """
     density = _compute_density(x, y, kde_sample_size)
 

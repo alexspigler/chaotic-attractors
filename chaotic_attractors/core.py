@@ -119,6 +119,9 @@ def generate_chaotic(
 
     a, b, c, d = params["a"], params["b"], params["c"], params["d"]
 
+    if iterations is None:
+        raise ValueError("generate_chaotic() requires an explicit iterations count")
+
     x = np.zeros(iterations, np.float64)
     y = np.zeros(iterations, np.float64)
 
@@ -469,7 +472,6 @@ def save_attractor(
         List of saved file paths
     """
     try:
-
         equation_id = data.get("equation_id")
         if include_info and equation_id is None:
             raise ValueError("include_info=True requires equation_id in data dict")
@@ -528,7 +530,7 @@ def save_attractor(
             saved_files.append(output_path)
             print(f"Saved: {output_path}")
 
-            print("\nDone!")
+        print("\nDone!")
 
         return saved_files
 
