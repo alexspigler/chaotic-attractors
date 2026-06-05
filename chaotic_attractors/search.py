@@ -19,6 +19,7 @@ import numpy.typing as npt
 from .core import (
     COLOR_METHOD,
     _compute_density,
+    _screen_geometry,
     GRADIENT_HIGH,
     GRADIENT_LOW,
     VIRIDIS_PALETTE,
@@ -58,7 +59,7 @@ def search_attractors(
     y_start: float,
     num_to_find: int = 10,
     max_attempts: int = 5_000,
-    parameter_ranges: Dict[str, Tuple[float, float]] = None,
+    parameter_ranges: Dict[str, Tuple[float, float]] | None = None,
     test_iterations: int = 100_000,
     final_iterations: int = 2_000_000,
     decimals: int = 2,
@@ -363,53 +364,24 @@ def evaluate_attractor_second(
             - unique_ratio: float (if passed)
             - aspect_ratio: float (if passed)
     """
-    # If data not provided, generate it
-    if x is None or y is None:
-        if params is None or equation_id is None:
-            raise ValueError("Must provide either (x, y) or (params, equation_id)")
+    screen = _screen_geometry(
+        params=params,
+        equation_id=equation_id,
+        x=x,
+        y=y,
+        x_start=x_start,
+        y_start=y_start,
+        min_small_side=min_small_side,
+        max_small_side=max_small_side,
+        iterations=iterations,
+    )
+    if "score" in screen:
+        return screen
 
-        try:
-            x, y = generate_chaotic(
-                params=params,
-                equation_id=equation_id,
-                iterations=iterations,
-                x_start=x_start,
-                y_start=y_start,
-            )
-
-        except Exception as e:
-            return {
-                "score": -1.0,
-                "reason": f"Exception during generation: {e}",
-            }
-
-    x = np.asarray(x)
-    y = np.asarray(y)
-
-    finite_mask = np.isfinite(x) & np.isfinite(y)
-    x = x[finite_mask]
-    y = y[finite_mask]
-
-    if x.size < 100 or y.size < 100:
-        return {
-            "score": -1.0,
-            "reason": "Insufficient valid points",
-        }
-
-    x_diff = np.max(x) - np.min(x)
-    y_diff = np.max(y) - np.min(y)
-
-    if x_diff < min_small_side or y_diff < min_small_side:
-        return {
-            "score": -1.0,
-            "reason": f"Range too small ({'x_diff' if x_diff < y_diff else 'y_diff'} = {min(x_diff, y_diff):.2f}) - likely collapses",
-        }
-
-    if x_diff > max_small_side or y_diff > max_small_side:
-        return {
-            "score": -1.0,
-            "reason": f"Range too large ({'x_diff' if x_diff > y_diff else 'y_diff'} = {max(x_diff, y_diff):.2f}), likely diverges",
-        }
+    x = np.asarray(screen["x"])
+    y = np.asarray(screen["y"])
+    x_diff = screen["x_diff"]
+    y_diff = screen["y_diff"]
 
     # Unique ratio
     rounded_points = np.column_stack(

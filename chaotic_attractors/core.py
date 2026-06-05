@@ -30,7 +30,7 @@ from .equations import EQUATION_LIBRARY
 # ===================================================
 
 # Visualization settings
-ALPHA_DEFAULT: float = 0.3  # 0.0 - 1.0 (fully opaque)
+ALPHA_DEFAULT: float = 0.3  # opacity: 0.0 (transparent) to 1.0 (opaque)
 POINT_SIZE_DEFAULT: float = 0.15
 
 # Color configuration
@@ -151,7 +151,7 @@ def generate_chaotic(
     return x, y
 
 
-def evaluate_attractor_first(
+def _screen_geometry(
     params: Dict[str, float],
     equation_id: str,
     x: np.ndarray | None = None,
@@ -160,22 +160,16 @@ def evaluate_attractor_first(
     y_start: float | None = None,
     min_small_side: float = 0.25,
     max_small_side: float = 500.0,
-    max_aspect_ratio: float = 4.0,
     iterations: int | None = None,
 ) -> Dict[str, Any]:
     """
-    Evaluate parameter set quality using geometric and statistical checks.
+    Shared first-stage screening for both evaluators: generate the trajectory if
+    (x, y) are not supplied, drop non-finite points, and apply the point-count and
+    range checks.
 
-    Filters out uninteresting parameter sets. Checks for divergence, collapse to
-    periodic orbits, and poor aspect ratios.
-
-    Returns:
-        Dictionary containing:
-            - score: 2 if passed, -1 if rejected
-            - reason: str explaining rejection or 'Passed all checks'
-            - x_range: float (if passed)
-            - y_range: float (if passed)
-            - aspect_ratio: float (if passed)
+    Returns either a rejection dict {"score": -1.0, "reason": ...} or a pass dict
+    {"x", "y", "x_diff", "y_diff"}. The aspect-ratio and unique-ratio checks are
+    left to the callers, which apply them in different orders.
     """
     # If data not provided, generate it
     if x is None or y is None:
@@ -225,6 +219,57 @@ def evaluate_attractor_first(
             "reason": f"Range too large ({'x_diff' if x_diff > y_diff else 'y_diff'} = {max(x_diff, y_diff):.2f}), likely diverges",
         }
 
+    return {
+        "x": x,
+        "y": y,
+        "x_diff": x_diff,
+        "y_diff": y_diff,
+    }
+
+
+def evaluate_attractor_first(
+    params: Dict[str, float],
+    equation_id: str,
+    x: np.ndarray | None = None,
+    y: np.ndarray | None = None,
+    x_start: float | None = None,
+    y_start: float | None = None,
+    min_small_side: float = 0.25,
+    max_small_side: float = 500.0,
+    max_aspect_ratio: float = 4.0,
+    iterations: int | None = None,
+) -> Dict[str, Any]:
+    """
+    Evaluate parameter set quality using geometric and statistical checks.
+
+    Filters out uninteresting parameter sets. Checks for divergence, collapse to
+    periodic orbits, and poor aspect ratios.
+
+    Returns:
+        Dictionary containing:
+            - score: 2.0 if passed, -1.0 if rejected
+            - reason: str explaining rejection or 'Passed all checks'
+            - x_range: float (if passed)
+            - y_range: float (if passed)
+            - aspect_ratio: float (if passed)
+    """
+    screen = _screen_geometry(
+        params=params,
+        equation_id=equation_id,
+        x=x,
+        y=y,
+        x_start=x_start,
+        y_start=y_start,
+        min_small_side=min_small_side,
+        max_small_side=max_small_side,
+        iterations=iterations,
+    )
+    if "score" in screen:
+        return screen
+
+    x_diff = screen["x_diff"]
+    y_diff = screen["y_diff"]
+
     aspect_ratio = x_diff / y_diff
     max_aspect_component = max(aspect_ratio, 1.0 / aspect_ratio)
 
@@ -235,7 +280,7 @@ def evaluate_attractor_first(
         }
 
     return {
-        "score": 2,
+        "score": 2.0,
         "reason": "Passed all checks",
         "x_range": x_diff,
         "y_range": y_diff,
@@ -310,61 +355,57 @@ def prepare_generate_data(
     Raises ValueError if fewer than 10,000 valid points are generated.
     """
 
-    try:
-        print("")
-        print(
-            f"Testing parameter set with {test_iterations:,} iterations before full generation..."
+    print("")
+    print(
+        f"Testing parameter set with {test_iterations:,} iterations before full generation..."
+    )
+
+    evaluation = evaluate_attractor_first(
+        params=params,
+        x_start=x_start,
+        y_start=y_start,
+        equation_id=equation_id,
+        iterations=test_iterations,
+    )
+
+    if evaluation["score"] < 0:
+        raise ValueError(f"Attractor validation failed: {evaluation['reason']}")
+
+    # Passed quick checks; now do full iterations and save
+    print("Initial tests passed")
+    print(f"Generating full attractor with {final_iterations:,} iterations")
+
+    x, y = generate_chaotic(
+        params=params,
+        equation_id=equation_id,
+        iterations=final_iterations,
+        x_start=x_start,
+        y_start=y_start,
+    )
+
+    print(f"Generated {len(x):,} valid points")
+    print(f"X range: [{x.min():.3f}, {x.max():.3f}]")
+    print(f"Y range: [{y.min():.3f}, {y.max():.3f}]")
+
+    valid_mask = np.isfinite(x) & np.isfinite(y)
+    x = x[valid_mask]
+    y = y[valid_mask]
+
+    if len(x) < 10_000:
+        raise ValueError(
+            f"Insufficient valid points for plotting an attractor:\n"
+            f"Generated {len(x)}, need at least 10,000."
         )
 
-        evaluation = evaluate_attractor_first(
-            params=params,
-            x_start=x_start,
-            y_start=y_start,
-            equation_id=equation_id,
-            iterations=test_iterations,
-        )
+    density = _compute_density(x, y, kde_sample_size)
 
-        if evaluation["score"] < 0:
-            raise ValueError(f"Attractor validation failed: {evaluation['reason']}")
-
-        # Passed quick checks; now do full iterations and save
-        print("Initial tests passed")
-        print(f"Generating full attractor with {final_iterations:,} iterations")
-
-        x, y = generate_chaotic(
-            params=params,
-            equation_id=equation_id,
-            iterations=final_iterations,
-            x_start=x_start,
-            y_start=y_start,
-        )
-
-        print(f"Generated {len(x):,} valid points")
-        print(f"X range: [{x.min():.3f}, {x.max():.3f}]")
-        print(f"Y range: [{y.min():.3f}, {y.max():.3f}]")
-
-        valid_mask = np.isfinite(x) & np.isfinite(y)
-        x = x[valid_mask]
-        y = y[valid_mask]
-
-        if len(x) < 10_000:
-            raise ValueError(
-                f"Insufficient valid points for plotting an attractor:\n"
-                f"Generated {len(x)}, need at least 10,000."
-            )
-
-        density = _compute_density(x, y, kde_sample_size)
-
-        return {
-            "x": x,
-            "y": y,
-            "density": density,
-            "params": params,
-            "equation_id": equation_id,
-        }
-
-    except KeyboardInterrupt:
-        print("\nInterrupted by user")
+    return {
+        "x": x,
+        "y": y,
+        "density": density,
+        "params": params,
+        "equation_id": equation_id,
+    }
 
 
 def create_colormap(method: str, **kwargs: Any) -> LinearSegmentedColormap:

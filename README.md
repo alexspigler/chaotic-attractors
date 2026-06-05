@@ -7,9 +7,9 @@ A Python package for automated discovery and visualization of 4-parameter chaoti
 ## Gallery
 
 <p align="center">
-  <img src="images/Tinkerbell.png" width="270"/>
-  <img src="images/Custom2.png" width="270"/>
-  <img src="images/Custom3.png" width="270"/>
+  <img src="images/Tinkerbell.webp" width="270"/>
+  <img src="images/Custom2.webp" width="270"/>
+  <img src="images/Custom3.webp" width="270"/>
 </p>
 
 

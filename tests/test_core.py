@@ -130,7 +130,7 @@ class TestGenerateChaotic:
 
 
 class TestPrepareGenerateData:
-    """Tests for the prepare_attractor_data function."""
+    """Tests for the prepare_generate_data function."""
 
     def test_returns_dict_with_required_keys(self):
         """Test that output dictionary contains all required keys."""

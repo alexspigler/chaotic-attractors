@@ -214,7 +214,9 @@ def main() -> None:
     try:
         if args.mode == "generate":
             # Start from defaults and override if flags are provided
-            equation_id = args.equation or DEFAULT_EQUATION
+            equation_id = (
+                args.equation if args.equation is not None else DEFAULT_EQUATION
+            )
 
             params = DEFAULT_PARAMS.copy()
             if args.a is not None:
@@ -226,14 +228,24 @@ def main() -> None:
             if args.d is not None:
                 params["d"] = args.d
 
-            test_iterations = args.test_iter or DEFAULT_TEST_ITERATIONS
-            final_iterations = args.final_iter or DEFAULT_FINAL_ITERATIONS
+            test_iterations = (
+                args.test_iter
+                if args.test_iter is not None
+                else DEFAULT_TEST_ITERATIONS
+            )
+            final_iterations = (
+                args.final_iter
+                if args.final_iter is not None
+                else DEFAULT_FINAL_ITERATIONS
+            )
 
-            x_start = args.x_start or DEFAULT_X_START
-            y_start = args.y_start or DEFAULT_Y_START
+            x_start = args.x_start if args.x_start is not None else DEFAULT_X_START
+            y_start = args.y_start if args.y_start is not None else DEFAULT_Y_START
 
-            save_format = args.format or DEFAULT_FORMAT
-            output_dir = args.output_dir or DEFAULT_OUTPUT_DIR
+            save_format = args.format if args.format is not None else DEFAULT_FORMAT
+            output_dir = (
+                args.output_dir if args.output_dir is not None else DEFAULT_OUTPUT_DIR
+            )
 
             data = prepare_generate_data(
                 params=params,
@@ -255,22 +267,38 @@ def main() -> None:
 
         elif args.mode == "search":
             # Start from defaults and override if flags are provided
-            equation_id = args.equation or DEFAULT_EQUATION
+            equation_id = (
+                args.equation if args.equation is not None else DEFAULT_EQUATION
+            )
 
-            num_to_find = args.num_to_find or DEFAULT_NUMBER
-            max_attempts = args.max_attempts or DEFAULT_MAX_ATTEMPTS
-            decimals = args.decimals or DEFAULT_DECIMALS
+            num_to_find = (
+                args.num_to_find if args.num_to_find is not None else DEFAULT_NUMBER
+            )
+            max_attempts = (
+                args.max_attempts
+                if args.max_attempts is not None
+                else DEFAULT_MAX_ATTEMPTS
+            )
+            decimals = args.decimals if args.decimals is not None else DEFAULT_DECIMALS
             parameter_ranges = {
                 "a": (args.range_min, args.range_max),
                 "b": (args.range_min, args.range_max),
                 "c": (args.range_min, args.range_max),
                 "d": (args.range_min, args.range_max),
             }
-            x_start = args.x_start or DEFAULT_X_START
-            y_start = args.y_start or DEFAULT_Y_START
-            test_iterations = args.test_iter or DEFAULT_TEST_ITERATIONS
-            final_iterations = args.final_iter or DEFAULT_FINAL_ITERATIONS
-            save_format = args.format or DEFAULT_FORMAT
+            x_start = args.x_start if args.x_start is not None else DEFAULT_X_START
+            y_start = args.y_start if args.y_start is not None else DEFAULT_Y_START
+            test_iterations = (
+                args.test_iter
+                if args.test_iter is not None
+                else DEFAULT_TEST_ITERATIONS
+            )
+            final_iterations = (
+                args.final_iter
+                if args.final_iter is not None
+                else DEFAULT_FINAL_ITERATIONS
+            )
+            save_format = args.format if args.format is not None else DEFAULT_FORMAT
 
             search_attractors(
                 equation_id=equation_id,
