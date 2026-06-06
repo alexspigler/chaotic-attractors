@@ -3,9 +3,11 @@ Parameter search for 4-parameter chaotic attractors.
 
 This module provides:
 - generate_random: uniformly sample parameters with fixed decimal places
-- evaluate_attractor_second: quick screening of full parameter sets
-- search_attractors: random search over parameter space
-- prepare_search_data: scoring results
+- evaluate_attractor_second: second-stage geometric/statistical validation of a
+  fully simulated trajectory
+- search_attractors: random search over parameter space, screening candidates on
+  a short trajectory and fully simulating only the survivors
+- prepare_search_data: compute point density (KDE) for visualization
 """
 
 import csv
@@ -205,7 +207,6 @@ def search_attractors(
                     params=params,
                     x=x,
                     y=y,
-                    final_iterations=final_iterations,
                     kde_sample_size=50_000,
                     equation_id=equation_id,
                 )
@@ -315,7 +316,6 @@ def prepare_search_data(
     x: npt.NDArray[np.float64],
     y: npt.NDArray[np.float64],
     equation_id: str,
-    final_iterations: int = 2_000_000,
     kde_sample_size: int = 50_000,
 ) -> Dict[str, Any]:
     """

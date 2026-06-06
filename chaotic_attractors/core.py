@@ -577,6 +577,7 @@ def save_attractor(
 
     except KeyboardInterrupt:
         print("\nInterrupted by user")
+        raise
 
 
 def convert_to_math_text(eq_str: str) -> str:
