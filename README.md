@@ -294,7 +294,7 @@ open htmlcov/index.html
 
 ## Author
 **Alex Spigler** — Statistics & Computer Science, George Washington University  
-[GitHub](https://github.com/alexspigler) · [LinkedIn](https://linkedin.com/in/alexspigler)
+[LinkedIn](https://linkedin.com/in/alexspigler) · [alexspigler.dev](https://alexspigler.dev)
 
 ---
 
