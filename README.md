@@ -109,6 +109,10 @@ The normalization ensures symmetric penalization—deviations above or below the
 git clone https://github.com/alexspigler/chaotic-attractors.git
 cd chaotic-attractors
 
+# Create and activate a virtual environment
+python3 -m venv .venv
+source .venv/bin/activate          # Windows: .venv\Scripts\activate
+
 # Install package with dependencies
 pip install .
 
