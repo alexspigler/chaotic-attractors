@@ -5,6 +5,12 @@ import pytest
 from chaotic_attractors import __main__ as cli
 
 
+def test_help_keeps_multiline_examples_readable():
+    help_text = cli.build_parser().format_help()
+
+    assert "\n      --a -2.17" in help_text
+
+
 def test_default_generate_uses_viable_tinkerbell_start(monkeypatch, tmp_path):
     captured = {}
 

@@ -37,12 +37,12 @@ def build_parser() -> argparse.ArgumentParser:
         Examples:
           chaotic-attractors --equation Tinkerbell --seed 42
 
-          chaotic-attractors --equation Custom3 \
-              --a -2.17 --b -2.7 --c -2.08 --d -2.83 \
+          chaotic-attractors --equation Custom3 \\\\
+              --a -2.17 --b -2.7 --c -2.08 --d -2.83 \\\\
               --x-start 0 --y-start 0 --format all --seed 42
 
-          chaotic-attractors --mode search --equation Custom3 \
-              --range-min -3 --range-max 3 --num-to-find 10 \
+          chaotic-attractors --mode search --equation Custom3 \\\\
+              --range-min -3 --range-max 3 --num-to-find 10 \\\\
               --max-attempts 50000 --seed 42
         """)
     parser = argparse.ArgumentParser(
