@@ -7,11 +7,13 @@ import pytest
 
 from chaotic_attractors.core import (
     _compile_equation,
+    _compute_density,
     _get_equation_functions,
     convert_to_math_text,
     create_colormap,
     generate_chaotic,
     prepare_generate_data,
+    save_attractor,
 )
 
 
@@ -51,8 +53,7 @@ class TestGenerateChaotic:
 
         assert len(x) == len(y)
 
-    def test_respects_iteration_limit(self):
-        """Test that output length doesn't exceed requested iterations."""
+    def test_returns_every_requested_point_for_stable_parameters(self):
         params = {"a": 0.9, "b": -0.6013, "c": 2.0, "d": 0.5}
         iterations = 5000
         x_start = -0.72
@@ -65,8 +66,8 @@ class TestGenerateChaotic:
             iterations=iterations,
         )
 
-        assert len(x) <= iterations
-        assert len(y) <= iterations
+        assert len(x) == iterations
+        assert len(y) == iterations
 
     def test_handles_divergent_parameters(self):
         """Test that divergent parameters terminate early without crashing."""
@@ -81,8 +82,19 @@ class TestGenerateChaotic:
             iterations=1000,
         )
 
-        # Should terminate early due to non-finite values
-        assert len(x) < 10000
+        assert len(x) < 1000
+
+    def test_burn_in_discards_the_transient(self):
+        params = {"a": 0.9, "b": -0.6013, "c": 2.0, "d": 0.5}
+        full_x, full_y = generate_chaotic(
+            params, "Tinkerbell", -0.72, -0.64, iterations=1100
+        )
+        x, y = generate_chaotic(
+            params, "Tinkerbell", -0.72, -0.64, iterations=1000, burn_in=100
+        )
+
+        np.testing.assert_array_equal(x, full_x[100:])
+        np.testing.assert_array_equal(y, full_y[100:])
 
     def test_initial_conditions_are_set(self):
         """Test that initial conditions are properly set."""
@@ -143,12 +155,17 @@ class TestPrepareGenerateData:
             x_start=x_start,
             y_start=y_start,
             final_iterations=50000,
+            kde_sample_size=500,
+            lyapunov_iterations=1000,
+            seed=7,
         )
 
         assert "x" in data
         assert "y" in data
         assert "density" in data
         assert "params" in data
+        assert data["lyapunov_exponent"] > 0
+        assert data["seed"] == 7
 
     def test_density_normalized_to_zero_one(self):
         """Test that density values are normalized to [0, 1] range."""
@@ -161,6 +178,9 @@ class TestPrepareGenerateData:
             x_start=x_start,
             y_start=y_start,
             final_iterations=50000,
+            kde_sample_size=500,
+            lyapunov_iterations=1000,
+            seed=7,
         )
 
         assert data["density"].min() == 0.0
@@ -172,13 +192,13 @@ class TestPrepareGenerateData:
         x_start = -0.72
         y_start = -0.64
 
-        with pytest.raises(ValueError, match="Insufficient valid points"):
+        with pytest.raises(ValueError, match="Attractor validation failed"):
             prepare_generate_data(
                 params=params,
                 equation_id="Tinkerbell",
                 x_start=x_start,
                 y_start=y_start,
-                final_iterations=5000,
+                final_iterations=10000,
             )
 
 
@@ -284,3 +304,44 @@ class TestConvertToMathText:
         result = convert_to_math_text("sin(x) + cos(y)")
         assert r"\sin" in result
         assert r"\cos" in result
+
+    def test_inverse_hyperbolic_name_is_not_rewritten_twice(self):
+        result = convert_to_math_text("np.arcsinh(x[n-1])")
+
+        assert result == r"\mathrm{arcsinh}(x_n)"
+
+
+def test_density_sampling_is_reproducible():
+    x = np.linspace(-1.0, 1.0, 200)
+    y = np.sin(3 * x)
+
+    first = _compute_density(x, y, 75, rng=np.random.default_rng(44))
+    second = _compute_density(x, y, 75, rng=np.random.default_rng(44))
+
+    np.testing.assert_array_equal(first, second)
+
+
+def test_save_refuses_to_overwrite_without_permission(tmp_path):
+    x = np.linspace(0.0, 1.0, 100)
+    data = {"x": x, "y": x, "density": x, "params": {}}
+    saved = save_attractor(
+        data,
+        x_start=0,
+        y_start=0,
+        output_dir=str(tmp_path),
+        prefix="sample",
+        include_info=False,
+        dpi=20,
+    )
+
+    assert saved == [str(tmp_path / "sample_1.png")]
+    with pytest.raises(FileExistsError, match="Refusing to overwrite"):
+        save_attractor(
+            data,
+            x_start=0,
+            y_start=0,
+            output_dir=str(tmp_path),
+            prefix="sample",
+            include_info=False,
+            dpi=20,
+        )

@@ -8,6 +8,7 @@ import pytest
 from chaotic_attractors.search import (
     evaluate_attractor_second,
     generate_random,
+    search_attractors,
 )
 
 
@@ -62,6 +63,21 @@ class TestGenerateRandom:
 
         assert len(np.unique(list(values))) >= 97
 
+    def test_seeded_generator_is_reproducible(self):
+        first_rng = np.random.default_rng(42)
+        second_rng = np.random.default_rng(42)
+
+        first = [generate_random(-1, 1, 2, rng=first_rng) for _ in range(10)]
+        second = [generate_random(-1, 1, 2, rng=second_rng) for _ in range(10)]
+
+        assert first == second
+
+    def test_misaligned_bounds_are_respected(self):
+        rng = np.random.default_rng(9)
+        values = [generate_random(0.011, 0.021, 2, rng=rng) for _ in range(20)]
+
+        assert values == [0.02] * 20
+
 
 class TestEvaluateAttractor:
     """Tests for the evaluate_attractor_second function."""
@@ -102,6 +118,8 @@ class TestEvaluateAttractor:
         assert "y_range" in result
         assert "unique_ratio" in result
         assert "aspect_ratio" in result
+        assert result["aspect_ratio"] >= 1.0
+        assert result["lyapunov_exponent"] > 0.0
 
     def test_rejects_divergent_parameters(self):
         """Test that divergent parameters are rejected."""
@@ -158,61 +176,50 @@ class TestEvaluateAttractor:
         assert result["reason"] == "Passed all checks"
 
     def test_aspect_ratio_bounds(self):
-        """Test that aspect ratio check works correctly."""
         params = {"a": 0.9, "b": -0.6013, "c": 2.0, "d": 0.5}
-        x_start = -0.72
-        y_start = -0.64
 
+        x = np.linspace(0, 100, 1000)
+        y = np.linspace(0, 1, 1000)
         result = evaluate_attractor_second(
             params=params,
             equation_id="Tinkerbell",
-            x_start=x_start,
-            y_start=y_start,
-            iterations=5000,
-            max_aspect_ratio=1.00001,
+            x=x,
+            y=y,
+            max_aspect_ratio=4.0,
         )
 
-        if result["score"] < 0.0 and "aspect" in result["reason"].lower():
-            assert True
+        assert result["score"] < 0.0
+        assert "aspect ratio" in result["reason"].lower()
 
     def test_unique_ratio_bounds(self):
-        """Test that unique ratio check works correctly."""
         params = {"a": 0.9, "b": -0.6013, "c": 2.0, "d": 0.5}
-        x_start = -0.72
-        y_start = -0.64
 
+        x = np.tile([0.0, 1.0], 500)
+        y = np.tile([0.0, 1.0], 500)
         result = evaluate_attractor_second(
             params=params,
             equation_id="Tinkerbell",
-            x_start=x_start,
-            y_start=y_start,
-            iterations=5000,
+            x=x,
+            y=y,
             min_unique_ratio=0.1,
-            max_unique_ratio=0.95,
         )
 
-        if result["score"] >= 0.0:
-            assert 0.1 <= result["unique_ratio"] <= 0.95
+        assert result["score"] < 0.0
+        assert "unique point ratio" in result["reason"].lower()
 
-    def test_handles_exception_during_generation(self):
-        """Test that exceptions during generation are caught."""
+    def test_unknown_equation_is_an_input_error(self):
         params = {"a": 0.9, "b": -0.6, "c": 2.0, "d": 0.5}
         x_start = -0.72
         y_start = -0.64
 
-        result = evaluate_attractor_second(
-            params=params,
-            equation_id="Unknown",
-            x_start=x_start,
-            y_start=y_start,
-            iterations=5000,
-        )
-
-        assert result["score"] < 0.0
-        assert (
-            "exception" in result["reason"].lower()
-            or "error" in result["reason"].lower()
-        )
+        with pytest.raises(KeyError, match="Unknown equation"):
+            evaluate_attractor_second(
+                params=params,
+                equation_id="Unknown",
+                x_start=x_start,
+                y_start=y_start,
+                iterations=5000,
+            )
 
     def test_range_checks_work(self):
         """Test that min and max range checks are applied."""
@@ -240,7 +247,9 @@ class TestEvaluateAttractorEdgeCases:
     def test_handles_all_zeros(self):
         """Test handling when all generated points are zero."""
         params = {"a": 0.0, "b": 0.0, "c": 0.0, "d": 0.0}
-        result = evaluate_attractor_second(params, "Tinkerbell", iterations=1000)
+        result = evaluate_attractor_second(
+            params, "Tinkerbell", x_start=0, y_start=0, iterations=1000
+        )
 
         assert result["score"] < 0.0
 
@@ -258,20 +267,90 @@ class TestEvaluateAttractorEdgeCases:
         )
 
         assert result["score"] < 0.0
-        assert "insufficient valid points" in result["reason"].lower()
+        assert "terminated early" in result["reason"].lower()
 
-    def test_scoring_formula_properties(self):
-        """Test that scoring formula has expected properties."""
+    def test_scoring_formula_properties(self, monkeypatch):
         params = {"a": 0.9, "b": -0.6013, "c": 2.0, "d": 0.5}
-        x_start = -0.72
-        y_start = -0.64
-
+        monkeypatch.setattr(
+            "chaotic_attractors.search.estimate_largest_lyapunov",
+            lambda **_: 0.2,
+        )
+        unique_x = np.linspace(0.0, 1.5, 400)
+        unique_y = np.linspace(0.0, 1.0, 400)
+        x = np.concatenate([unique_x, unique_x[:200]])
+        y = np.concatenate([unique_y, unique_y[:200]])
         result = evaluate_attractor_second(
             params=params,
             equation_id="Tinkerbell",
-            x_start=x_start,
-            y_start=y_start,
-            iterations=5000,
+            x=x,
+            y=y,
         )
 
-        assert result["score"] >= 0.0
+        assert result["score"] == pytest.approx(0.0, abs=1e-12)
+
+
+def test_search_records_reproducibility_metadata(monkeypatch, tmp_path):
+    monkeypatch.setattr(
+        "chaotic_attractors.search.evaluate_attractor_first",
+        lambda **_: {"score": 2.0},
+    )
+    monkeypatch.setattr(
+        "chaotic_attractors.search.generate_chaotic",
+        lambda **kwargs: (
+            np.linspace(0, 1, kwargs["iterations"]),
+            np.linspace(0, 1, kwargs["iterations"]),
+        ),
+    )
+    monkeypatch.setattr(
+        "chaotic_attractors.search.evaluate_attractor_second",
+        lambda **_: {
+            "score": 0.25,
+            "x_range": 1.0,
+            "y_range": 1.0,
+            "aspect_ratio": 1.0,
+            "unique_ratio": 0.8,
+            "lyapunov_exponent": 0.3,
+        },
+    )
+    monkeypatch.setattr(
+        "chaotic_attractors.search.prepare_search_data",
+        lambda **kwargs: {
+            "x": kwargs["x"],
+            "y": kwargs["y"],
+            "density": np.ones(len(kwargs["x"])),
+            "params": kwargs["params"],
+            "equation_id": kwargs["equation_id"],
+        },
+    )
+    monkeypatch.setattr(
+        "chaotic_attractors.search.save_attractor", lambda **_: ["sample.png"]
+    )
+
+    result = search_attractors(
+        equation_id="Custom1",
+        x_start=0.5,
+        y_start=0.5,
+        num_to_find=1,
+        max_attempts=2,
+        test_iterations=100,
+        final_iterations=10_000,
+        output_dir=str(tmp_path),
+        seed=123,
+    )
+
+    assert result["seed"] == 123
+    assert result["attempts"] == 1
+    assert result["summary"][0]["lyapunov_exponent"] == 0.3
+    assert result["summary"][0]["burn_in"] == 1000
+    assert (tmp_path / "Custom1_summary.csv").is_file()
+
+
+def test_search_rejects_zero_attempts(tmp_path):
+    with pytest.raises(ValueError, match="max_attempts must be positive"):
+        search_attractors(
+            equation_id="Custom1",
+            x_start=0.5,
+            y_start=0.5,
+            max_attempts=0,
+            output_dir=str(tmp_path),
+        )

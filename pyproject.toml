@@ -9,8 +9,8 @@ exclude = ["tests*", "images*"]
 
 [project]
 name = "chaotic-attractors"
-version = "1.0.0"
-description = "Python toolkit for discovering and visualizing 4-parameter chaotic dynamical systems"
+version = "1.1.0"
+description = "Python toolkit for searching, validating, and visualizing four-parameter chaotic systems"
 readme = "README.md"
 requires-python = ">=3.10"
 license = {text = "MIT"}
@@ -29,6 +29,8 @@ classifiers = [
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
 ]
 dependencies = [
     "numpy>=1.24.0",

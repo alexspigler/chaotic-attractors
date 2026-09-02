@@ -1,8 +1,4 @@
-"""
-chaotic_attractors package
-
-Provides tools to search for, generate, evaluate, and visualize 4-parameter chaotic attractors.
-"""
+"""Search, validate, generate, and visualize chaotic attractors."""
 
 from .core import (
     ALPHA_DEFAULT,
@@ -17,8 +13,6 @@ from .core import (
     GRADIENTN_VALUES,
     POINT_SIZE_DEFAULT,
     VIRIDIS_PALETTE,
-    _compile_equation,
-    _get_equation_functions,
     convert_to_math_text,
     create_attractor_with_eq,
     create_colormap,
@@ -29,6 +23,7 @@ from .core import (
     save_attractor,
 )
 from .equations import EQUATION_LIBRARY
+from .metrics import estimate_largest_lyapunov
 from .search import (
     evaluate_attractor_second,
     generate_random,

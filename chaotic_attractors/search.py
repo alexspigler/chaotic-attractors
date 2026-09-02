@@ -1,58 +1,209 @@
-"""
-Parameter search for 4-parameter chaotic attractors.
-
-This module provides:
-- generate_random: uniformly sample parameters with fixed decimal places
-- evaluate_attractor_second: second-stage geometric/statistical validation of a
-  fully simulated trajectory
-- search_attractors: random search over parameter space, screening candidates on
-  a short trajectory and fully simulating only the survivors
-- prepare_search_data: compute point density (KDE) for visualization
-"""
+"""Parameter search and validation for four-parameter attractors."""
 
 import csv
-import os
+import math
 import time
-from typing import Any, Dict, Tuple
+from collections.abc import Mapping
+from pathlib import Path
+from typing import Any
 
 import numpy as np
 import numpy.typing as npt
 
 from .core import (
     COLOR_METHOD,
-    _compute_density,
-    _screen_geometry,
     GRADIENT_HIGH,
     GRADIENT_LOW,
     VIRIDIS_PALETTE,
+    _compute_density,
+    _screen_geometry,
     evaluate_attractor_first,
     generate_chaotic,
     save_attractor,
 )
+from .metrics import estimate_largest_lyapunov
 
 
-def generate_random(min_val: float, max_val: float, decimals: int) -> float:
-    """
-    Generate a random value with fixed decimal precision.
+def generate_random(
+    min_val: float,
+    max_val: float,
+    decimals: int,
+    rng: np.random.Generator | None = None,
+) -> float:
+    """Sample uniformly from the decimal grid inside the requested bounds."""
+    if not np.isfinite(min_val) or not np.isfinite(max_val):
+        raise ValueError("range bounds must be finite")
+    if min_val >= max_val:
+        raise ValueError(f"Invalid range: min_val={min_val}, max_val={max_val}")
+    if decimals < 0 or decimals > 8:
+        raise ValueError("decimals must be between 0 and 8")
 
-    Samples uniformly from the discrete set of values between min_val and max_val
-    that can be represented with the specified number of decimal places.
+    scale = 10**decimals
+    lower_index = math.ceil(min_val * scale - 1e-12)
+    upper_index = math.floor(max_val * scale + 1e-12)
+    if lower_index > upper_index:
+        raise ValueError("the requested range contains no values at this precision")
+
+    rng = np.random.default_rng() if rng is None else rng
+    index = int(rng.integers(lower_index, upper_index + 1))
+    return index / scale
 
 
-    Returns:
-        Random value rounded to specified decimal places
-    """
-    step = 10 ** (-decimals)
-    num_steps = int(round((max_val - min_val) / step))
+def evaluate_attractor_second(
+    params: Mapping[str, float],
+    equation_id: str,
+    x: np.ndarray | None = None,
+    y: np.ndarray | None = None,
+    x_start: float | None = None,
+    y_start: float | None = None,
+    min_small_side: float = 0.25,
+    max_small_side: float = 500.0,
+    digits_unique: int = 4,
+    min_unique_ratio: float = 0.25,
+    max_unique_ratio: float = 1.0,
+    max_aspect_ratio: float = 4.0,
+    iterations: int | None = None,
+    burn_in: int = 0,
+    lyapunov_iterations: int = 10_000,
+    min_lyapunov_exponent: float = 0.0,
+) -> dict[str, Any]:
+    """Apply full geometric, recurrence, and sensitivity checks."""
+    if digits_unique < 0:
+        raise ValueError("digits_unique cannot be negative")
+    if not 0.0 <= min_unique_ratio < max_unique_ratio <= 1.0:
+        raise ValueError("unique-ratio bounds must satisfy 0 <= min < max <= 1")
+    if max_aspect_ratio < 1.0:
+        raise ValueError("max_aspect_ratio must be at least 1")
 
-    if num_steps <= 0:
-        raise ValueError(
-            f"Invalid range: min_val={min_val}, max_val={max_val}, step={step}"
-        )
+    screen = _screen_geometry(
+        params=params,
+        equation_id=equation_id,
+        x=x,
+        y=y,
+        x_start=x_start,
+        y_start=y_start,
+        min_small_side=min_small_side,
+        max_small_side=max_small_side,
+        iterations=iterations,
+        burn_in=burn_in,
+    )
+    if "score" in screen:
+        return screen
 
-    index = np.random.randint(0, num_steps + 1)
-    value = min_val + index * step
-    return round(value, decimals)
+    x_values = np.asarray(screen["x"])
+    y_values = np.asarray(screen["y"])
+    x_range = float(screen["x_diff"])
+    y_range = float(screen["y_diff"])
+
+    rounded_points = np.column_stack(
+        [np.round(x_values, digits_unique), np.round(y_values, digits_unique)]
+    )
+    unique_ratio = np.unique(rounded_points, axis=0).shape[0] / len(rounded_points)
+    if unique_ratio < min_unique_ratio:
+        return {
+            "score": -1.0,
+            "reason": f"Low unique point ratio ({unique_ratio:.4f}) - likely collapses",
+        }
+    if unique_ratio > max_unique_ratio:
+        return {
+            "score": -1.0,
+            "reason": f"High unique point ratio ({unique_ratio:.4f})",
+        }
+
+    aspect_ratio = max(x_range, y_range) / min(x_range, y_range)
+    if aspect_ratio > max_aspect_ratio:
+        return {
+            "score": -1.0,
+            "reason": f"Bad aspect ratio ({aspect_ratio:.2f})",
+        }
+
+    lyapunov_exponent = estimate_largest_lyapunov(
+        x=x_values,
+        y=y_values,
+        params=params,
+        equation_id=equation_id,
+        max_iterations=lyapunov_iterations,
+    )
+    if not np.isfinite(lyapunov_exponent) or lyapunov_exponent <= min_lyapunov_exponent:
+        return {
+            "score": -1.0,
+            "reason": (
+                "Finite-time Lyapunov exponent "
+                f"{lyapunov_exponent:.4f} is not above "
+                f"{min_lyapunov_exponent:.4f}"
+            ),
+            "lyapunov_exponent": lyapunov_exponent,
+        }
+
+    ideal_aspect_ratio = 1.5
+    ideal_unique_ratio = 2.0 / 3.0
+    max_aspect_deviation = max(
+        abs(1.0 - ideal_aspect_ratio),
+        abs(max_aspect_ratio - ideal_aspect_ratio),
+    )
+    max_unique_deviation = max(
+        abs(min_unique_ratio - ideal_unique_ratio),
+        abs(max_unique_ratio - ideal_unique_ratio),
+    )
+    aspect_normalized = (aspect_ratio - ideal_aspect_ratio) / max_aspect_deviation
+    unique_normalized = (unique_ratio - ideal_unique_ratio) / max_unique_deviation
+
+    return {
+        "score": aspect_normalized**2 + unique_normalized**2,
+        "reason": "Passed all checks",
+        "x_range": x_range,
+        "y_range": y_range,
+        "unique_ratio": unique_ratio,
+        "aspect_ratio": aspect_ratio,
+        "lyapunov_exponent": lyapunov_exponent,
+    }
+
+
+def prepare_search_data(
+    params: Mapping[str, float],
+    x: npt.NDArray[np.float64],
+    y: npt.NDArray[np.float64],
+    equation_id: str,
+    kde_sample_size: int = 50_000,
+    rng: np.random.Generator | None = None,
+) -> dict[str, Any]:
+    """Compute point density for a validated search result."""
+    density = _compute_density(x, y, kde_sample_size, rng=rng)
+    return {
+        "x": x,
+        "y": y,
+        "density": density,
+        "params": dict(params),
+        "equation_id": equation_id,
+    }
+
+
+def _validate_search_settings(
+    num_to_find: int,
+    max_attempts: int,
+    test_iterations: int,
+    final_iterations: int,
+    progress_interval: int,
+    parameter_ranges: Mapping[str, tuple[float, float]],
+) -> None:
+    if num_to_find <= 0:
+        raise ValueError("num_to_find must be positive")
+    if max_attempts <= 0:
+        raise ValueError("max_attempts must be positive")
+    if test_iterations <= 0:
+        raise ValueError("test_iterations must be positive")
+    if final_iterations < 10_000:
+        raise ValueError("final_iterations must be at least 10,000")
+    if progress_interval <= 0:
+        raise ValueError("progress_interval must be positive")
+
+    missing = {"a", "b", "c", "d"} - parameter_ranges.keys()
+    if missing:
+        raise KeyError(f"Missing parameter ranges: {missing}")
+    for name in ("a", "b", "c", "d"):
+        lower, upper = parameter_ranges[name]
+        if not np.isfinite(lower) or not np.isfinite(upper) or lower >= upper:
+            raise ValueError(f"Invalid range for {name}: ({lower}, {upper})")
 
 
 def search_attractors(
@@ -61,7 +212,7 @@ def search_attractors(
     y_start: float,
     num_to_find: int = 10,
     max_attempts: int = 5_000,
-    parameter_ranges: Dict[str, Tuple[float, float]] | None = None,
+    parameter_ranges: Mapping[str, tuple[float, float]] | None = None,
     test_iterations: int = 100_000,
     final_iterations: int = 2_000_000,
     decimals: int = 2,
@@ -77,61 +228,72 @@ def search_attractors(
     max_aspect_ratio: float = 4.0,
     include_info: bool = True,
     save_format: str = "png",
-) -> Dict[str, Any]:
-    """
-    Perform random search over parameter space to find interesting attractors.
-
-    Randomly samples parameter combinations, evaluates them with quick tests,
-    then generates and saves full-resolution visualizations of those that pass.
-    Creates both individual files and a summary CSV.
-
-    Returns:
-        Dictionary containing:
-            - attractors: List[Dict] with parameters, stats, and filenames
-            - summary: List[Dict] with rows for CSV output
-            - attempts: int total parameter sets tested
-            - elapsed_minutes: float total search time
-    """
+    burn_in: int = 1_000,
+    lyapunov_iterations: int = 10_000,
+    min_lyapunov_exponent: float = 0.0,
+    kde_sample_size: int = 50_000,
+    seed: int | None = None,
+    overwrite: bool = False,
+    rasterized_points: bool = True,
+) -> dict[str, Any]:
+    """Search a discrete parameter space and save candidates that pass validation."""
     if parameter_ranges is None:
         parameter_ranges = {
-            "a": (-3, 3),
-            "b": (-3, 3),
-            "c": (-3, 3),
-            "d": (-3, 3),
+            "a": (-3.0, 3.0),
+            "b": (-3.0, 3.0),
+            "c": (-3.0, 3.0),
+            "d": (-3.0, 3.0),
         }
 
-    os.makedirs(output_dir, exist_ok=True)
+    _validate_search_settings(
+        num_to_find=num_to_find,
+        max_attempts=max_attempts,
+        test_iterations=test_iterations,
+        final_iterations=final_iterations,
+        progress_interval=progress_interval,
+        parameter_ranges=parameter_ranges,
+    )
+    if burn_in < 0:
+        raise ValueError("burn_in cannot be negative")
+    if start_counter < 1:
+        raise ValueError("start_counter must be at least 1")
+    if kde_sample_size < 2:
+        raise ValueError("kde_sample_size must be at least 2")
 
-    if prefix is None:
-        prefix = equation_id
+    prefix = equation_id if prefix is None else prefix
+    output_directory = Path(output_dir)
+    output_directory.mkdir(parents=True, exist_ok=True)
+    csv_path = output_directory / f"{prefix}_summary.csv"
+    if csv_path.exists() and not overwrite:
+        raise FileExistsError(
+            f"Refusing to overwrite existing output: {csv_path}. "
+            "Pass overwrite=True to replace it."
+        )
 
-    found_attractors = []
+    seed_sequence = np.random.SeedSequence(seed)
+    effective_seed = int(seed_sequence.entropy)
+    rng = np.random.default_rng(seed_sequence)
+
+    found_attractors: list[dict[str, Any]] = []
+    seen_parameters: set[tuple[float, float, float, float]] = set()
     attempts = 0
-
-    print("")
-    print(f"Starting search for {num_to_find} attractors (equation: {equation_id})...")
-    start_time = time.time()
+    duplicates_skipped = 0
+    print(f"\nStarting search for {num_to_find} attractors ({equation_id})...")
+    print(f"Random seed: {effective_seed}")
+    start_time = time.monotonic()
 
     try:
         while len(found_attractors) < num_to_find and attempts < max_attempts:
             attempts += 1
-
             params = {
-                "a": generate_random(
-                    parameter_ranges["a"][0], parameter_ranges["a"][1], decimals
-                ),
-                "b": generate_random(
-                    parameter_ranges["b"][0], parameter_ranges["b"][1], decimals
-                ),
-                "c": generate_random(
-                    parameter_ranges["c"][0], parameter_ranges["c"][1], decimals
-                ),
-                "d": generate_random(
-                    parameter_ranges["d"][0], parameter_ranges["d"][1], decimals
-                ),
+                name: generate_random(*parameter_ranges[name], decimals, rng=rng)
+                for name in ("a", "b", "c", "d")
             }
-
-            attractor_num = len(found_attractors) + start_counter
+            parameter_key = tuple(params[name] for name in ("a", "b", "c", "d"))
+            if parameter_key in seen_parameters:
+                duplicates_skipped += 1
+                continue
+            seen_parameters.add(parameter_key)
 
             evaluation = evaluate_attractor_first(
                 params=params,
@@ -139,50 +301,48 @@ def search_attractors(
                 y_start=y_start,
                 equation_id=equation_id,
                 iterations=test_iterations,
+                min_small_side=min_small_side,
+                max_small_side=max_small_side,
+                max_aspect_ratio=max_aspect_ratio,
+                burn_in=burn_in,
             )
 
             if attempts % progress_interval == 0:
-                elapsed_sec = time.time() - start_time
-                rate = elapsed_sec / attempts if attempts > 0 else 0.0
+                elapsed_seconds = time.monotonic() - start_time
+                tests_per_second = (
+                    attempts / elapsed_seconds if elapsed_seconds else 0.0
+                )
                 print(
                     f"\rAttempts: {attempts} | "
                     f"Found: {len(found_attractors)}/{num_to_find} | "
-                    f"Elapsed: {elapsed_sec:.1f} sec | Rate: {1 / rate:.2f} test/sec",
+                    f"Elapsed: {elapsed_seconds:.1f} sec | "
+                    f"Rate: {tests_per_second:.2f} test/sec",
+                    end="",
                     flush=True,
                 )
 
             if evaluation["score"] < 0:
                 continue
 
-            print("\n\nInitial tests passed")
+            attractor_number = len(found_attractors) + start_counter
             print(
-                f"Found candidate {attractor_num} at attempt {attempts} "
-                f"with params: a={params['a']}, b={params['b']}, "
-                f"c={params['c']}, d={params['d']}"
+                f"\nCandidate {attractor_number} passed the short screen at "
+                f"attempt {attempts}: {params}"
             )
-            print(f"Generating full attractor with {final_iterations:,} iterations")
-
             x, y = generate_chaotic(
                 params=params,
                 equation_id=equation_id,
                 iterations=final_iterations,
                 x_start=x_start,
                 y_start=y_start,
+                burn_in=burn_in,
             )
-
-            print(f"Generated {len(x):,} valid points")
-            print(f"X range: [{x.min():.3f}, {x.max():.3f}]")
-            print(f"Y range: [{y.min():.3f}, {y.max():.3f}]")
-
-            valid_mask = np.isfinite(x) & np.isfinite(y)
-            x = x[valid_mask]
-            y = y[valid_mask]
-
-            if len(x) < 10_000:
-                raise ValueError(
-                    f"Insufficient valid points for plotting an attractor:\n"
-                    f"Generated {len(x)}, need at least 10,000."
+            if len(x) != final_iterations:
+                print(
+                    "Full trajectory terminated early: "
+                    f"{len(x):,} of {final_iterations:,} points"
                 )
+                continue
 
             evaluation = evaluate_attractor_second(
                 params=params,
@@ -195,50 +355,44 @@ def search_attractors(
                 min_unique_ratio=min_unique_ratio,
                 max_unique_ratio=max_unique_ratio,
                 max_aspect_ratio=max_aspect_ratio,
+                lyapunov_iterations=lyapunov_iterations,
+                min_lyapunov_exponent=min_lyapunov_exponent,
             )
-
             if evaluation["score"] < 0:
-                print(f"Attractor validation failed: {evaluation['reason']}")
-                print("")
+                print(f"Full validation failed: {evaluation['reason']}")
                 continue
 
-            try:
-                data = prepare_search_data(
-                    params=params,
-                    x=x,
-                    y=y,
-                    kde_sample_size=50_000,
-                    equation_id=equation_id,
-                )
-
-            except Exception as e:
-                print(f"Skipped attractor {attractor_num} due to data prep error: {e}")
-                continue
-
-            print("Final tests passed")
-            print(
-                f"Score: {evaluation['score']:.2f} | "
-                f"X range: {evaluation['x_range']:.3f} | "
-                f"Y range: {evaluation['y_range']:.3f} | "
-                f"Aspect ratio: {evaluation['aspect_ratio']:.2f} | "
-                f"Unique ratio: {evaluation['unique_ratio']:.3f}"
+            data = prepare_search_data(
+                params=params,
+                x=x,
+                y=y,
+                kde_sample_size=kde_sample_size,
+                equation_id=equation_id,
+                rng=rng,
             )
-
+            data.update(
+                {
+                    "burn_in": burn_in,
+                    "lyapunov_exponent": evaluation["lyapunov_exponent"],
+                    "seed": effective_seed,
+                }
+            )
             saved_files = save_attractor(
                 data=data,
                 x_start=x_start,
                 y_start=y_start,
-                output_dir=output_dir,
+                output_dir=str(output_directory),
                 prefix=prefix,
-                start_counter=attractor_num,
+                start_counter=attractor_number,
                 save_format=save_format,
                 include_info=include_info,
                 color_method=COLOR_METHOD,
                 palette=VIRIDIS_PALETTE,
                 low=GRADIENT_LOW,
                 high=GRADIENT_HIGH,
+                overwrite=overwrite,
+                rasterized_points=rasterized_points,
             )
-
             found_attractors.append(
                 {
                     "parameters": params,
@@ -246,203 +400,68 @@ def search_attractors(
                     "files": saved_files,
                 }
             )
-
+            print(
+                f"Accepted with Lyapunov exponent "
+                f"{evaluation['lyapunov_exponent']:.4f}"
+            )
     except KeyboardInterrupt:
         print("\nInterrupted by user")
 
-    finally:
-        elapsed_minutes = (time.time() - start_time) / 60.0
-        print(
-            f"\n\n{len(found_attractors)} attractors completed after {attempts} attempts "
-            f"({elapsed_minutes:.2f} minutes) "
-            f"Rate: {len(found_attractors) / elapsed_minutes:.2f} attractors/minute"
-        )
+    elapsed_minutes = (time.monotonic() - start_time) / 60.0
+    rate = len(found_attractors) / elapsed_minutes if elapsed_minutes else 0.0
+    print(
+        f"\n{len(found_attractors)} attractors completed after {attempts} attempts "
+        f"({elapsed_minutes:.2f} minutes; {rate:.2f} attractors/minute)"
+    )
 
-        summary_rows = []
-        for index, attr in enumerate(found_attractors, start=start_counter):
-            eval_ = attr["evaluation"]
-            row = {
+    summary_rows = []
+    for index, attractor in enumerate(found_attractors, start=start_counter):
+        evaluation = attractor["evaluation"]
+        summary_rows.append(
+            {
                 "name": f"{prefix}_{index}",
-                "a": attr["parameters"]["a"],
-                "b": attr["parameters"]["b"],
-                "c": attr["parameters"]["c"],
-                "d": attr["parameters"]["d"],
-                "score": eval_["score"],
-                "x_range": eval_["x_range"],
-                "y_range": eval_["y_range"],
-                "aspect_ratio": eval_["aspect_ratio"],
-                "unique_ratio": eval_["unique_ratio"],
+                **attractor["parameters"],
+                "score": evaluation["score"],
+                "x_range": evaluation["x_range"],
+                "y_range": evaluation["y_range"],
+                "aspect_ratio": evaluation["aspect_ratio"],
+                "unique_ratio": evaluation["unique_ratio"],
+                "lyapunov_exponent": evaluation["lyapunov_exponent"],
+                "burn_in": burn_in,
+                "seed": effective_seed,
             }
-            summary_rows.append(row)
+        )
+    summary_rows.sort(key=lambda row: row["score"])
 
-        # Rank best-first: lower score = closer to the ideal aspect/density shape
-        summary_rows.sort(key=lambda r: r["score"])
-
-        if summary_rows:
-            csv_path = os.path.join(output_dir, f"{prefix}_summary.csv")
-            fieldnames = [
-                "name",
-                "a",
-                "b",
-                "c",
-                "d",
-                "score",
-                "x_range",
-                "y_range",
-                "aspect_ratio",
-                "unique_ratio",
-            ]
-            with open(csv_path, "w", newline="") as f:
-                writer = csv.DictWriter(f, fieldnames=fieldnames)
-                writer.writeheader()
-                for row in summary_rows:
-                    writer.writerow(row)
-            print(f"Saved parameter summary to: {csv_path}")
-        else:
-            print("No attractors found that met the criteria.")
-
-        result = {
-            "attractors": found_attractors,
-            "summary": summary_rows,
-            "attempts": attempts,
-            "elapsed_minutes": elapsed_minutes,
-        }
-
-    return result
-
-
-def prepare_search_data(
-    params: Dict[str, float],
-    x: npt.NDArray[np.float64],
-    y: npt.NDArray[np.float64],
-    equation_id: str,
-    kde_sample_size: int = 50_000,
-) -> Dict[str, Any]:
-    """
-    Compute density using KDE for visualization.
-
-    Returns dict with keys: 'x', 'y', 'density' (normalized 0-1), 'params'.
-    """
-    density = _compute_density(x, y, kde_sample_size)
+    if summary_rows:
+        fieldnames = [
+            "name",
+            "a",
+            "b",
+            "c",
+            "d",
+            "score",
+            "x_range",
+            "y_range",
+            "aspect_ratio",
+            "unique_ratio",
+            "lyapunov_exponent",
+            "burn_in",
+            "seed",
+        ]
+        with csv_path.open("w", newline="", encoding="utf-8") as csv_file:
+            writer = csv.DictWriter(csv_file, fieldnames=fieldnames)
+            writer.writeheader()
+            writer.writerows(summary_rows)
+        print(f"Saved parameter summary to: {csv_path}")
+    else:
+        print("No attractors found that met the criteria.")
 
     return {
-        "x": x,
-        "y": y,
-        "density": density,
-        "params": params,
-        "equation_id": equation_id,
-    }
-
-
-def evaluate_attractor_second(
-    params: Dict[str, float],
-    equation_id: str,
-    x: np.ndarray | None = None,
-    y: np.ndarray | None = None,
-    x_start: float | None = None,
-    y_start: float | None = None,
-    min_small_side: float = 0.25,
-    max_small_side: float = 500.0,
-    digits_unique: int = 4,
-    min_unique_ratio: float = 0.25,
-    max_unique_ratio: float = 1.0,
-    max_aspect_ratio: float = 4.0,
-    iterations: int | None = None,
-) -> Dict[str, Any]:
-    """
-    Evaluate parameter set quality using geometric and statistical checks.
-
-    Filters out uninteresting parameter sets. Checks for divergence, collapse to
-    periodic orbits, and poor aspect ratios.
-
-    Returns:
-        Dictionary containing:
-            - score: float >= 0 if passed (lower is better), -1 if rejected
-            - reason: str explaining rejection or 'Passed all checks'
-            - x_range: float (if passed)
-            - y_range: float (if passed)
-            - unique_ratio: float (if passed)
-            - aspect_ratio: float (if passed)
-    """
-    screen = _screen_geometry(
-        params=params,
-        equation_id=equation_id,
-        x=x,
-        y=y,
-        x_start=x_start,
-        y_start=y_start,
-        min_small_side=min_small_side,
-        max_small_side=max_small_side,
-        iterations=iterations,
-    )
-    if "score" in screen:
-        return screen
-
-    x = np.asarray(screen["x"])
-    y = np.asarray(screen["y"])
-    x_diff = screen["x_diff"]
-    y_diff = screen["y_diff"]
-
-    # Unique ratio
-    rounded_points = np.column_stack(
-        [np.round(x, digits_unique), np.round(y, digits_unique)]
-    )
-    unique_points = np.unique(rounded_points, axis=0)
-    unique_ratio = unique_points.shape[0] / rounded_points.shape[0]
-
-    if unique_ratio < min_unique_ratio:
-        return {
-            "score": -1.0,
-            "reason": f"Low unique point ratio ({unique_ratio:.4f}) - likely collapses",
-        }
-
-    if unique_ratio > max_unique_ratio:
-        return {
-            "score": -1.0,
-            "reason": f"High unique point ratio ({unique_ratio:.4f}) - likely diverges",
-        }
-
-    aspect_ratio = x_diff / y_diff
-    max_aspect_component = max(aspect_ratio, 1.0 / aspect_ratio)
-
-    if max_aspect_component > max_aspect_ratio:
-        return {
-            "score": -1.0,
-            "reason": f"Bad aspect ratio ({max_aspect_component:.2f})",
-        }
-
-    # Scoring (0 is best)
-    # Measures normalized squared deviations from ideal characteristics
-    ideal_aspect_ratio = 3 / 2  # Prefer slightly rectangular attractors
-    ideal_unique_ratio = 2 / 3  # Balance between structure and complexity
-    min_aspect_ratio = 1.0
-
-    # Calculate maximum possible deviation in either direction from ideal
-    # This ensures symmetric penalization regardless of which side of ideal
-    max_aspect_deviation = max(
-        abs(min_aspect_ratio - ideal_aspect_ratio),
-        abs(max_aspect_ratio - ideal_aspect_ratio),
-    )
-
-    max_unique_deviation = max(
-        abs(min_unique_ratio - ideal_unique_ratio),
-        abs(max_unique_ratio - ideal_unique_ratio),
-    )
-
-    # Normalize deviations to [0, 1] scale (after squaring)
-    aspect_normalized = (
-        max_aspect_component - ideal_aspect_ratio
-    ) / max_aspect_deviation
-    unique_normalized = (unique_ratio - ideal_unique_ratio) / max_unique_deviation
-
-    # Range: [0, 2] where 0 = both metrics at ideal, 2 = both at worst extremes (that would pass filtering)
-    score_final = aspect_normalized**2 + unique_normalized**2
-
-    return {
-        "score": score_final,
-        "reason": "Passed all checks",
-        "x_range": x_diff,
-        "y_range": y_diff,
-        "unique_ratio": unique_ratio,
-        "aspect_ratio": aspect_ratio,
+        "attractors": found_attractors,
+        "summary": summary_rows,
+        "attempts": attempts,
+        "duplicates_skipped": duplicates_skipped,
+        "elapsed_minutes": elapsed_minutes,
+        "seed": effective_seed,
     }
